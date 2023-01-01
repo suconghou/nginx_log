@@ -8,7 +8,6 @@ type Line = object
     str:string
 
 const blank = {' '}
-const minus = {'-'}
 const quotation = {'"'}
 const square_left = {' ','['}
 const square_right = {' ',']'}
@@ -17,7 +16,7 @@ const digital_and_minus = {'0'..'9','-'}
 const digital_and_dot_and_minus = {'0'..'9','.','-'}
 
 # 根据条件解析，并去除前置后置x字符
-proc parse_item_trimx(this:var Line,left:set[char],right:set[char],cond:proc):string=
+proc parse_item_trimx(this:var Line,left:set[char],right:set[char],cond:proc,strip_left:set[char]={}):string=
     let strlen = this.str.len;
     var i = this.index;
     var item_value:string;
@@ -48,7 +47,14 @@ proc parse_item_trimx(this:var Line,left:set[char],right:set[char],cond:proc):st
             if found_start < 0:
                 # 完全没有匹配到
                 raise newException(ValueError,"匹配失败:"&this.str)
-            # 包含当前字符c
+            # 包含cond成立时当前字符x,如果结果字符串以某字符开始，我们配置了strip_left开头
+            # 例如解析request_line,开头有引号,我们仅在生成结果时过滤
+            if strip_left.len > 0:
+                while found_start < found_end:
+                    if this.str[found_start] in strip_left:
+                        found_start+=1
+                    else:
+                        break;
             item_value = this.str.substr(found_start,found_end)
             # 执行到此处，已匹配到了想要的字符串，要么匹配到字符串结尾了，要么中途中断，要么匹配到最后一个字符了但不符合
             if i>=strlen:
@@ -103,7 +109,12 @@ proc parse_remote_addr(this:var Line):string=
 
 # 去除可能存在的-,非空格
 proc parse_remote_user(this:var Line):string =
-    this.str = this.str.strip(true,false,minus)
+    let strlen = this.str.len
+    while this.index < strlen:
+        if this.str[this.index] == '\45':
+            this.index+=1
+        else:
+            break;
     return this.parse_item_trimx(blank,blank,not_space)
 
 # 匹配到],并且下一个是空格
@@ -119,8 +130,7 @@ proc parse_request_line(this:var Line):string=
         if c > 2 :
             return false
         return not (x=='\34' and y=='\32' and (z=='\50' or z=='\49' or z=='\48') )
-    let a = this.parse_item_trimx(blank,blank,v)
-    return a.strip(true,true,quotation)
+    return this.parse_item_trimx(blank,blank,v,quotation)
 
 # 是数字
 proc parse_status_code(this:var Line):string = 
@@ -132,18 +142,15 @@ proc parse_body_bytes_sent(this:var Line):string =
 
 # 当前字符是双引号，下个字符是空格
 proc parse_http_referer(this:var Line):string =
-    let x= this.parse_item_trimx(blank,blank,quote_string_end)
-    return x.strip(true,true,quotation)
+    return this.parse_item_trimx(blank,blank,quote_string_end,quotation)
 
 # 当前字符是双引号，下个字符是空格
 proc parse_http_user_agent(this:var Line):string =
-    let x= this.parse_item_trimx(blank,blank,quote_string_end)
-    return x.strip(true,true,quotation)
+    return this.parse_item_trimx(blank,blank,quote_string_end,quotation)
 
 # 当前字符是双引号，下个字符是空格
 proc parse_http_x_forwarded_for(this:var Line):string =
-    let x = this.parse_item_trimx(blank,blank,quote_string_end)
-    return x.strip(true,true,quotation)
+    return this.parse_item_trimx(blank,blank,quote_string_end,quotation)
 
 # 当前字符是空格，上个字符是字母
 proc parse_host(this:var Line):string =

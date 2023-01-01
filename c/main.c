@@ -88,7 +88,7 @@ int digital_or_none_end(unsigned char x, unsigned char y, unsigned char z)
 }
 
 // offset 字符串坐标
-int parse_item_trim_space(const char *s, int *offset, int len, char *item_value, char_is_match cond, int strip_square)
+int parse_item_trim_space(const char *s, int *offset, int len, char *item_value, char_is_match cond, int strip_square, int result_strip_left_quote)
 {
     int pad = 1;
     int found_start = -1;
@@ -127,6 +127,22 @@ int parse_item_trim_space(const char *s, int *offset, int len, char *item_value,
             if (found_start < 0)
             {
                 goto end;
+            }
+            // 包含cond成立时当前字符x,如果结果字符串以某字符开始，我们配置了result_strip_left_quote开头
+            // 例如解析request_line,开头有引号,我们仅在生成结果时过滤
+            if (result_strip_left_quote > 0)
+            {
+                while (found_start < found_end)
+                {
+                    if (s[found_start] == 34)
+                    {
+                        found_start++;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
             }
             int v_len = found_end - found_start + 1;
             strncpy(item_value, s + found_start, v_len);
@@ -168,7 +184,7 @@ end:
 
 int parse_remote_addr(const char *s, int *offset, int len, char *item_value)
 {
-    return parse_item_trim_space(s, offset, len, item_value, digital_dot, 0);
+    return parse_item_trim_space(s, offset, len, item_value, digital_dot, 0, 0);
 }
 
 int parse_remote_user(const char *s, int *offset, int len, char *item_value)
@@ -186,92 +202,88 @@ int parse_remote_user(const char *s, int *offset, int len, char *item_value)
         }
     }
     *offset = i;
-    return parse_item_trim_space(s, offset, len, item_value, not_space, 0);
+    return parse_item_trim_space(s, offset, len, item_value, not_space, 0, 0);
 }
 
 int parse_time_local(const char *s, int *offset, int len, char *item_value)
 {
-    return parse_item_trim_space(s, offset, len, item_value, square_right_space, 1);
+    return parse_item_trim_space(s, offset, len, item_value, square_right_space, 1, 0);
 }
 
 int parse_request_line(const char *s, int *offset, int len, char *item_value)
 {
     space_count = 0;
-    return parse_item_trim_space(s, offset, len, item_value, request_line_quote_end, 0);
+    return parse_item_trim_space(s, offset, len, item_value, request_line_quote_end, 0, 1);
 }
 
 int parse_status_code(const char *s, int *offset, int len, char *item_value)
 {
-    return parse_item_trim_space(s, offset, len, item_value, digital, 0);
+    return parse_item_trim_space(s, offset, len, item_value, digital, 0, 0);
 }
 
 int parse_body_bytes_sent(const char *s, int *offset, int len, char *item_value)
 {
-    return parse_item_trim_space(s, offset, len, item_value, digital, 0);
+    return parse_item_trim_space(s, offset, len, item_value, digital, 0, 0);
 }
 
 int parse_http_referer(const char *s, int *offset, int len, char *item_value)
 {
-    return parse_item_trim_space(s, offset, len, item_value, quote_string_end, 0);
+    return parse_item_trim_space(s, offset, len, item_value, quote_string_end, 0, 1);
 }
 
 int parse_http_user_agent(const char *s, int *offset, int len, char *item_value)
 {
-    return parse_item_trim_space(s, offset, len, item_value, quote_string_end, 0);
+    return parse_item_trim_space(s, offset, len, item_value, quote_string_end, 0, 1);
 }
 
 int parse_http_x_forwarded_for(const char *s, int *offset, int len, char *item_value)
 {
-    return parse_item_trim_space(s, offset, len, item_value, quote_string_end, 0);
+    return parse_item_trim_space(s, offset, len, item_value, quote_string_end, 0, 1);
 }
 
 int parse_host(const char *s, int *offset, int len, char *item_value)
 {
-    return parse_item_trim_space(s, offset, len, item_value, string_end, 0);
+    return parse_item_trim_space(s, offset, len, item_value, string_end, 0, 0);
 }
 
 int parse_request_length(const char *s, int *offset, int len, char *item_value)
 {
-    return parse_item_trim_space(s, offset, len, item_value, digital, 0);
+    return parse_item_trim_space(s, offset, len, item_value, digital, 0, 0);
 }
 
 int parse_bytes_sent(const char *s, int *offset, int len, char *item_value)
 {
-    return parse_item_trim_space(s, offset, len, item_value, digital, 0);
+    return parse_item_trim_space(s, offset, len, item_value, digital, 0, 0);
 }
 
 int parse_upstream_addr(const char *s, int *offset, int len, char *item_value)
 {
-    return parse_item_trim_space(s, offset, len, item_value, digital_or_none_end, 0);
+    return parse_item_trim_space(s, offset, len, item_value, digital_or_none_end, 0, 0);
 }
 
 int parse_upstream_status(const char *s, int *offset, int len, char *item_value)
 {
-    return parse_item_trim_space(s, offset, len, item_value, digital_or_none_end, 0);
+    return parse_item_trim_space(s, offset, len, item_value, digital_or_none_end, 0, 0);
 }
 
 int parse_request_time(const char *s, int *offset, int len, char *item_value)
 {
-    return parse_item_trim_space(s, offset, len, item_value, digital_dot, 0);
+    return parse_item_trim_space(s, offset, len, item_value, digital_dot, 0, 0);
 }
 
 int parse_upstream_response_time(const char *s, int *offset, int len, char *item_value)
 {
-    return parse_item_trim_space(s, offset, len, item_value, digital_dot_minus, 0);
+    return parse_item_trim_space(s, offset, len, item_value, digital_dot_minus, 0, 0);
 }
 
 int parse_upstream_connect_time(const char *s, int *offset, int len, char *item_value)
 {
-    return parse_item_trim_space(s, offset, len, item_value, digital_dot_minus, 0);
+    return parse_item_trim_space(s, offset, len, item_value, digital_dot_minus, 0, 0);
 }
 
 int parse_upstream_header_time(const char *s, int *offset, int len, char *item_value)
 {
-    return parse_item_trim_space(s, offset, len, item_value, digital_dot_minus, 0);
-}
-
-int process_line(char *line)
-{
+    return parse_item_trim_space(s, offset, len, item_value, digital_dot_minus, 0, 0);
 }
 
 int main()
@@ -289,93 +301,95 @@ int main()
         char value[8192] = {0};
         int len = strlen(s);
         int a = parse_remote_addr(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
+        printf("offset:%d\n", offset);
+        printf("index:%d\n", a);
         printf("remote_addr:%s\n", value);
 
         a = parse_remote_user(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
+        printf("offset:%d\n", offset);
+        printf("index:%d\n", a);
         printf("remote_user:%s\n", value);
 
         a = parse_time_local(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
+        printf("offset:%d\n", offset);
+        printf("index:%d\n", a);
         printf("time_local:%s\n", value);
 
         a = parse_request_line(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
+        printf("offset:%d\n", offset);
+        printf("index:%d\n", a);
         printf("request_line:%s\n", value);
 
         a = parse_status_code(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
+        printf("offset:%d\n", offset);
+        printf("index:%d\n", a);
         printf("status_code:%s\n", value);
 
         a = parse_body_bytes_sent(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
+        printf("offset:%d\n", offset);
+        printf("index:%d\n", a);
         printf("body_bytes_sent:%s\n", value);
 
         a = parse_http_referer(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
+        printf("offset:%d\n", offset);
+        printf("index:%d\n", a);
         printf("http_referer:%s\n", value);
 
         a = parse_http_user_agent(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
+        printf("offset:%d\n", offset);
+        printf("index:%d\n", a);
         printf("http_user_agent:%s\n", value);
 
         a = parse_http_x_forwarded_for(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
+        printf("offset:%d\n", offset);
+        printf("index:%d\n", a);
         printf("http_x_forwarded_for:%s\n", value);
 
         a = parse_host(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
+        printf("offset:%d\n", offset);
+        printf("index:%d\n", a);
         printf("host:%s\n", value);
 
         a = parse_request_length(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
+        printf("offset:%d\n", offset);
+        printf("index:%d\n", a);
         printf("request_length:%s\n", value);
 
         a = parse_bytes_sent(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
+        printf("offset:%d\n", offset);
+        printf("index:%d\n", a);
         printf("bytes_sent:%s\n", value);
 
         a = parse_upstream_addr(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
+        printf("offset:%d\n", offset);
+        printf("index:%d\n", a);
         printf("upstream_addr:%s\n", value);
 
         a = parse_upstream_status(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
+        printf("offset:%d\n", offset);
+        printf("index:%d\n", a);
         printf("upstream_status:%s\n", value);
 
         a = parse_request_time(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
+        printf("offset:%d\n", offset);
+        printf("index:%d\n", a);
         printf("request_time:%s\n", value);
 
         a = parse_upstream_response_time(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
+        printf("offset:%d\n", offset);
+        printf("index:%d\n", a);
         printf("upstream_response_time:%s\n", value);
 
         a = parse_upstream_connect_time(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
+        printf("offset:%d\n", offset);
+        printf("index:%d\n", a);
         printf("upstream_connect_time:%s\n", value);
 
         a = parse_upstream_header_time(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
+        printf("offset:%d\n", offset);
+        printf("index:%d\n", a);
         printf("upstream_header_time:%s\n", value);
     }
+
+    return 0;
 }
