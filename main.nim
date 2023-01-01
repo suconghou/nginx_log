@@ -16,55 +16,57 @@ const digital_and_dot = {'0'..'9','.'}
 const digital_and_minus = {'0'..'9','-'}
 const digital_and_dot_and_minus = {'0'..'9','.','-'}
 
-# TODO , 可以优化掉substr, 内部记录index
 # 根据条件解析，并去除前置后置x字符
 proc parse_item_trimx(this:var Line,left:set[char],right:set[char],cond:proc):string=
-    var i =0;
-    var start=0;
+    let strlen = this.str.len;
+    var i = this.index;
     var item_value:string;
-    var pad = true
-    var found = -1;
-    while i < this.str.len:
+    var pad = true;
+    var found_start = -1;
+    var found_end = -1;
+    while i < strlen:
         let x = this.str[i]
         i+=1; # i已指向下一个字符
         if x in left and pad:
             # 去前置连续x
-            start+=1;
+            this.index=i;
             continue
         else:
             pad = false
         if item_value.len < 1:
-            let y = if i<this.str.len: this.str[i] else: '\x00'
+            let y = if i<strlen: this.str[i] else: '\x00'
             let z = if i>=2: this.str[i-2] else: '\x00'
             # 符合预定格式,x为当前字符,y为下个字符,y可能为0,z为上一个字符
             if cond(x,y,z):
-                found = i-1
+                found_end = i-1
+                if found_start < 0 :
+                    found_start = found_end
                 # 如果未到行末尾,才能continue,否则i=len了,不能continue,会造成下次退出循环,item_value未赋值
-                if i<this.str.len:
+                if i<strlen:
                     continue
             # 否则匹配到边界或者完全没有匹配到
-            if found < 0:
+            if found_start < 0:
                 # 完全没有匹配到
                 raise newException(ValueError,"匹配失败:"&this.str)
             # 包含当前字符c
-            item_value = this.str.substr(start,found)
+            item_value = this.str.substr(found_start,found_end)
             # 执行到此处，已匹配到了想要的字符串，要么匹配到字符串结尾了，要么中途中断，要么匹配到最后一个字符了但不符合
-            if i>=this.str.len:
+            if i>=strlen:
                 # 如果中途中断，则不会进入此条件，下次循环会进去后置特定字符逻辑
                 # 如果最后一个字符符合，则found=len-1,此时剩余应为空
                 # 如果最后一个字符不符合，判断是否是后置字符，如果是则也为空
-                if found==this.str.len-1 or x in right:
-                    this.str = ""
+                if found_end==strlen-1 or x in right:
+                    this.index = strlen-1
                 else:
-                    this.str = this.str.substr(found+1)
+                    this.index = found_end+1
         else:
             if x in right:
                 # 去后置特定字符,如果当前字符就是最后一个字符，并且当前字符是特定字符，则i需等于len,以完全裁剪
-                if i < this.str.len :
+                if i < strlen :
                     continue;
-                elif i == this.str.len :
+                elif i == strlen :
                     i+=1
-            this.str = this.str.substr(i-1)
+            this.index = i-1
             break
     # 防止前置字符去除时，直接continue完所有
     if item_value.len < 1:
