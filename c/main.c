@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "hash.c"
+
 typedef int (*char_is_match)(unsigned char x, unsigned char y, unsigned char z);
 
 // 此变量解析每行时需置为0，模拟闭包
@@ -288,6 +290,20 @@ int parse_upstream_header_time(const char *s, int *offset, int len, char *item_v
 
 int main()
 {
+
+    table *t = newTable(10);
+    incr(t, "hello");
+    incr(t, "hello");
+    incr(t, "world");
+    incr(t, "world");
+    incr(t, "world");
+    incr(t, "world");
+    incr(t, "hi");
+    incr(t, "hi");
+    incr(t, "hi");
+    loop(t);
+    return 0;
+
     FILE *fp = fopen("/tmp/1", "r");
     if (fp == NULL)
     {
@@ -301,94 +317,94 @@ int main()
         char value[8192] = {0};
         int len = strlen(s);
         int a = parse_remote_addr(s, &offset, len, value);
-        printf("offset:%d\n", offset);
-        printf("index:%d\n", a);
-        printf("remote_addr:%s\n", value);
+        // printf("offset:%d\n", offset);
+        // printf("index:%d\n", a);
+        // printf("remote_addr:%s\n", value);
 
         a = parse_remote_user(s, &offset, len, value);
-        printf("offset:%d\n", offset);
-        printf("index:%d\n", a);
-        printf("remote_user:%s\n", value);
+        // printf("offset:%d\n", offset);
+        // printf("index:%d\n", a);
+        // printf("remote_user:%s\n", value);
 
         a = parse_time_local(s, &offset, len, value);
-        printf("offset:%d\n", offset);
-        printf("index:%d\n", a);
-        printf("time_local:%s\n", value);
+        // printf("offset:%d\n", offset);
+        // printf("index:%d\n", a);
+        // printf("time_local:%s\n", value);
 
         a = parse_request_line(s, &offset, len, value);
-        printf("offset:%d\n", offset);
-        printf("index:%d\n", a);
-        printf("request_line:%s\n", value);
+        // printf("offset:%d\n", offset);
+        // printf("index:%d\n", a);
+        // printf("request_line:%s\n", value);
 
         a = parse_status_code(s, &offset, len, value);
-        printf("offset:%d\n", offset);
-        printf("index:%d\n", a);
-        printf("status_code:%s\n", value);
+        // printf("offset:%d\n", offset);
+        // printf("index:%d\n", a);
+        // printf("status_code:%s\n", value);
 
         a = parse_body_bytes_sent(s, &offset, len, value);
-        printf("offset:%d\n", offset);
-        printf("index:%d\n", a);
-        printf("body_bytes_sent:%s\n", value);
+        // printf("offset:%d\n", offset);
+        // printf("index:%d\n", a);
+        // printf("body_bytes_sent:%s\n", value);
 
         a = parse_http_referer(s, &offset, len, value);
-        printf("offset:%d\n", offset);
-        printf("index:%d\n", a);
-        printf("http_referer:%s\n", value);
+        // printf("offset:%d\n", offset);
+        // printf("index:%d\n", a);
+        // printf("http_referer:%s\n", value);
 
         a = parse_http_user_agent(s, &offset, len, value);
-        printf("offset:%d\n", offset);
-        printf("index:%d\n", a);
-        printf("http_user_agent:%s\n", value);
+        // printf("offset:%d\n", offset);
+        // printf("index:%d\n", a);
+        // printf("http_user_agent:%s\n", value);
 
         a = parse_http_x_forwarded_for(s, &offset, len, value);
-        printf("offset:%d\n", offset);
-        printf("index:%d\n", a);
-        printf("http_x_forwarded_for:%s\n", value);
+        // printf("offset:%d\n", offset);
+        // printf("index:%d\n", a);
+        // printf("http_x_forwarded_for:%s\n", value);
 
         a = parse_host(s, &offset, len, value);
-        printf("offset:%d\n", offset);
-        printf("index:%d\n", a);
-        printf("host:%s\n", value);
+        // printf("offset:%d\n", offset);
+        // printf("index:%d\n", a);
+        // printf("host:%s\n", value);
 
         a = parse_request_length(s, &offset, len, value);
-        printf("offset:%d\n", offset);
-        printf("index:%d\n", a);
-        printf("request_length:%s\n", value);
+        // printf("offset:%d\n", offset);
+        // printf("index:%d\n", a);
+        // printf("request_length:%s\n", value);
 
         a = parse_bytes_sent(s, &offset, len, value);
-        printf("offset:%d\n", offset);
-        printf("index:%d\n", a);
-        printf("bytes_sent:%s\n", value);
+        // printf("offset:%d\n", offset);
+        // printf("index:%d\n", a);
+        // printf("bytes_sent:%s\n", value);
 
         a = parse_upstream_addr(s, &offset, len, value);
-        printf("offset:%d\n", offset);
-        printf("index:%d\n", a);
-        printf("upstream_addr:%s\n", value);
+        // printf("offset:%d\n", offset);
+        // printf("index:%d\n", a);
+        // printf("upstream_addr:%s\n", value);
 
         a = parse_upstream_status(s, &offset, len, value);
-        printf("offset:%d\n", offset);
-        printf("index:%d\n", a);
-        printf("upstream_status:%s\n", value);
+        // printf("offset:%d\n", offset);
+        // printf("index:%d\n", a);
+        // printf("upstream_status:%s\n", value);
 
         a = parse_request_time(s, &offset, len, value);
-        printf("offset:%d\n", offset);
-        printf("index:%d\n", a);
-        printf("request_time:%s\n", value);
+        // printf("offset:%d\n", offset);
+        // printf("index:%d\n", a);
+        // printf("request_time:%s\n", value);
 
         a = parse_upstream_response_time(s, &offset, len, value);
-        printf("offset:%d\n", offset);
-        printf("index:%d\n", a);
-        printf("upstream_response_time:%s\n", value);
+        // printf("offset:%d\n", offset);
+        // printf("index:%d\n", a);
+        // printf("upstream_response_time:%s\n", value);
 
         a = parse_upstream_connect_time(s, &offset, len, value);
-        printf("offset:%d\n", offset);
-        printf("index:%d\n", a);
-        printf("upstream_connect_time:%s\n", value);
+        // printf("offset:%d\n", offset);
+        // printf("index:%d\n", a);
+        // printf("upstream_connect_time:%s\n", value);
 
         a = parse_upstream_header_time(s, &offset, len, value);
-        printf("offset:%d\n", offset);
-        printf("index:%d\n", a);
-        printf("upstream_header_time:%s\n", value);
+        // printf("offset:%d\n", offset);
+        // printf("index:%d\n", a);
+        // printf("upstream_header_time:%s\n", value);
     }
 
     return 0;
