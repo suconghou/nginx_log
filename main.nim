@@ -1,6 +1,6 @@
 
 
-import tables,sets,strformat,strutils,terminal
+import tables,sets,strformat,strutils,terminal,math
 
 
 type Line = object
@@ -129,7 +129,7 @@ proc parse_request_line(this:var Line):string=
             c+=1
         if c > 2 :
             return false
-        return not (x=='\34' and y=='\32' and (z=='\50' or z=='\49' or z=='\48') )
+        return not (x=='\34' and y=='\32' and (z=='\49' or z=='\48') )
     return this.parse_item_trimx(blank,blank,v,quotation)
 
 # 是数字
@@ -200,6 +200,8 @@ proc process(filename:string)=
     var http_referer_data:OrderedTable[string,int];
     var http_user_agent_data:OrderedTable[string,int];
     var http_x_forwarded_for_data:OrderedTable[string,int];
+    var http_sent_data:OrderedTable[string,int];
+    var http_bad_code_data:OrderedTable[string,ref OrderedTable[string,int]];
     var total_bytes_sent :uint = 0;
     var total_lines:uint = 0;
 
@@ -222,7 +224,7 @@ proc process(filename:string)=
         total_bytes_sent+=bytes_sent_num
 
 
-        var n= remote_addr_data.getOrDefault(remote_addr,0)
+        var n = remote_addr_data.getOrDefault(remote_addr,0)
         remote_addr_data[remote_addr]=n+1
         n = remote_user_data.getOrDefault(remote_user,0)
         remote_user_data[remote_user]=n+1
@@ -236,9 +238,16 @@ proc process(filename:string)=
         http_referer_data[http_referer]=n+1
         n = http_user_agent_data.getOrDefault(http_user_agent,0)
         http_user_agent_data[http_user_agent]=n+1
-        n=http_x_forwarded_for_data.getOrDefault(http_x_forwarded_for,0)
+        n = http_x_forwarded_for_data.getOrDefault(http_x_forwarded_for,0)
         http_x_forwarded_for_data[http_x_forwarded_for]=n+1
+        n = http_sent_data.getOrDefault(request_line,0)
+        http_sent_data[request_line]=n+bytes_sent_num.int
 
+        if status_code!="200":
+            var info = http_bad_code_data.getOrDefault(status_code,newOrderedTable[string, int]())
+            n = info.getOrDefault(request_line,0)
+            info[request_line]=n+1
+            http_bad_code_data[status_code]=info
 
     for line in filename.lines:
         try:
@@ -249,101 +258,112 @@ proc process(filename:string)=
     # 分析完毕后，排序然后，打印统计数据
     
 
-    let t_width  = terminalWidth()
-
     let str_sent = formatSize(total_bytes_sent.int64)
     let ip_count = remote_addr_data.len
-    echo &"共计\e[1;34m{total_lines}\e[00m次访问\n发送总流量\e[1;32m{str_sent}\e[00m\n独立IP数\e[1;31m{ip_count}\e[00m"
+    echo &"\n共计\e[1;34m{total_lines}\e[00m次访问\n发送总流量\e[1;32m{str_sent}\e[00m\n独立IP数\e[1;31m{ip_count}\e[00m"
 
+    let limit = 100;
+    let t_width  = terminalWidth() - 16
+
+    proc print_stat_long(name:string,data:var OrderedTable[string, int],stripChar:set[char]={})=
+        data.sort(proc (x,y:(string,int)):int=y[1]-x[1])
+        echo &"\n\e[1;34m{name}\e[00m"
+        var i = 0;
+        var n = 0;
+        for u,num in data:
+            var stru = if stripChar.len > 0 : u.strip(true,true,stripChar) else: u
+            if stru.len < t_width :
+                stru = stru.alignLeft(t_width)
+            else :
+                stru = stru.substr(0,t_width-1)
+            echo fmt"{stru} {num:>6.6} {num.float*100/total_lines.float:.2f}%"
+            i+=1
+            n+=num
+            if i > limit:
+                break
+        let part1 = (fmt"{n}/{total_lines}").alignLeft(t_width)
+        echo &"前{limit}项占比\n{part1} {data.len:6.6} {n.float*100/total_lines.float:.2f}%\n"
+    
+    proc print_sent_long(name:string,data:var OrderedTable[string, int],stripChar:set[char]={})=
+        data.sort(proc (x,y:(string,int)):int=y[1]-x[1])
+        echo &"\n\e[1;34m{name}\e[00m"
+        var i = 0;
+        var n = 0;
+        let max_width = t_width - 6
+        for u,num in data:
+            var stru = if stripChar.len > 0 : u.strip(true,true,stripChar) else: u
+            if stru.len < max_width :
+                stru = stru.alignLeft(max_width)
+            else :
+                stru = stru.substr(0,max_width-1)
+            echo fmt"{stru} {formatSize(num):>12.12} {num.float*100/total_bytes_sent.float:.2f}%"
+            i+=1
+            n+=num
+            if i > limit:
+                break
+        let part1 = (fmt"{n}/{total_bytes_sent}").alignLeft(max_width)
+        echo &"前{limit}项占比\n{part1} {data.len:12.12} {n.float*100/total_bytes_sent.float:.2f}%\n"
+    
+    proc print_code_long(code:string,data:ref OrderedTable[string, int],stripChar:set[char]={})=
+        data.sort(proc (x,y:(string,int)):int=y[1]-x[1])
+        var count = 0;
+        for n in data.values:
+            count+=n
+        echo &"\n\e[1;34m状态码{code},共{count}次\e[00m"
+        var i = 0;
+        var n = 0;
+        for u,num in data:
+            var stru = if stripChar.len > 0 : u.strip(true,true,stripChar) else: u
+            if stru.len < t_width :
+                stru = stru.alignLeft(t_width)
+            else :
+                stru = stru.substr(0,t_width-1)
+            echo fmt"{stru} {num:>6.6} {num.float*100/total_lines.float:.2f}%"
+            i+=1
+            n+=num
+            if i > limit:
+                break
+        let part1 = (fmt"{n}/{total_lines}").alignLeft(t_width)
+        echo &"前{limit}项占比\n{part1} {data.len:6.6} {n.float*100/total_lines.float:.2f}%\n"
+
+
+    
     # 来访IP统计
-    remote_addr_data.sort(proc (x,y:(string,int)):int=y[1]-x[1])
-    echo &"\n\e[1;34m来访IP统计\e[00m"
-    var i = 0;
-    var limit = 100;
-    var n = 0;
-    for saddr,num in remote_addr_data:
-        echo fmt"{saddr:20.20} {num:6.6} {num.float*100/total_lines.float:.2f}%"
-        i+=1
-        n+=num
-        if i > limit:
-            break
-    var part1 = fmt"{n}/{limit}"
-    echo &"前{limit}项占比\n{part1:20.20} {remote_addr_data.len:6.6} {n.float*100/total_lines.float:.2f}%\n"
+    print_stat_long("来访IP统计",remote_addr_data)
+   
     # 用户统计
-    remote_user_data.sort(proc (x,y:(string,int)):int=y[1]-x[1])
-    echo &"\n\e[1;34m用户统计\e[00m"
-    i = 0;
-    n = 0;
-    for u,num in remote_user_data:
-        echo fmt"{u:20.20} {num:6.6} {num.float*100/total_lines.float:.2f}%"
-        i+=1
-        n+=num
-        if i > limit:
-            break
-    part1 = fmt"{n}/{limit}"
-    echo &"前{limit}项占比\n{part1:20.20} {remote_user_data.len:6.6} {n.float*100/total_lines.float:.2f}%\n"
+    print_stat_long("用户统计",remote_user_data)
+
     # 代理IP统计
-    http_x_forwarded_for_data.sort(proc (x,y:(string,int)):int=y[1]-x[1])
-    echo &"\n\e[1;34m代理IP统计\e[00m"
-    i = 0;
-    n = 0;
-    for u,num in http_x_forwarded_for_data:
-        echo fmt"{u:20.20} {num:6.6} {num.float*100/total_lines.float:.2f}%"
-        i+=1
-        n+=num
-        if i > limit:
-            break
-    part1 = fmt"{n}/{limit}"
-    echo &"前{limit}项占比\n{part1:20.20} {http_x_forwarded_for_data.len:6.6} {n.float*100/total_lines.float:.2f}%\n"
+    print_stat_long("代理IP统计",http_x_forwarded_for_data,{'"'})
 
     # HTTP请求统计
-    request_line_data.sort(proc (x,y:(string,int)):int=y[1]-x[1])
-    echo &"\n\e[1;34mHTTP请求统计\e[00m"
-    i = 0;
-    n = 0;
-    for u,num in request_line_data:
-        echo fmt"{u:20.20} {num:6.6} {num.float*100/total_lines.float:.2f}%"
-        i+=1
-        n+=num
-        if i > limit:
-            break
-    part1 = fmt"{n}/{limit}"
-    echo &"前{limit}项占比\n{part1:20.20} {request_line_data.len:6.6} {n.float*100/total_lines.float:.2f}%\n"
+    print_stat_long("HTTP请求统计",request_line_data)
 
     # User-Agent统计
-    http_user_agent_data.sort(proc (x,y:(string,int)):int=y[1]-x[1])
-    echo &"\n\e[1;34mUser-Agent统计\e[00m"
-    i = 0;
-    n = 0;
-    for u,num in http_user_agent_data:
-        echo fmt"{u:20.20} {num:6.6} {num.float*100/total_lines.float:.2f}%"
-        i+=1
-        n+=num
-        if i > limit:
-            break
-    part1 = fmt"{n}/{limit}"
-    echo &"前{limit}项占比\n{part1:20.20} {http_user_agent_data.len:6.6} {n.float*100/total_lines.float:.2f}%\n"
+    print_stat_long("User-Agent统计",http_user_agent_data)
 
     # HTTP REFERER 统计
-    http_referer_data.sort(proc (x,y:(string,int)):int=y[1]-x[1])
-    echo &"\n\e[1;34mHTTP REFERER 统计\e[00m"
-    i = 0;
-    n = 0;
-    for u,num in http_referer_data:
-        echo fmt"{u:100.100} {num:6.6} {num.float*100/total_lines.float:.2f}%"
-        i+=1
-        n+=num
-        if i > limit:
-            break
-    part1 = fmt"{n}/{limit}"
-    echo &"前{limit}项占比\n{part1:20.t_width} {http_referer_data.len:6.6} {n.float*100/total_lines.float:.2f}%\n"
-    
-    # 
+    print_stat_long("HTTP REFERER 统计",http_referer_data)
+
+    # 请求时间
+    print_stat_long("请求时间统计",time_local_data)
+
+    # HTTP响应状态统计
+    print_stat_long("HTTP响应状态统计",status_data)
+
+    # HTTP流量占比统计
+    print_sent_long("HTTP流量占比统计",http_sent_data)
+
+    # 非200状态码
+    http_bad_code_data.sort(proc (x,y:(string,ref OrderedTable[string, int])):int= cmp(x[0],y[0]))
+    for code,items in http_bad_code_data:
+        print_code_long(code,items)
+
+
 
 
 proc test1(line:string)= 
-    var aa = "hello"
-    aa.add("a")
     var l = Line(str :line)
     let remote_addr = l.parse_remote_addr()
     # echo "remote_addr:["&remote_addr&"]"
@@ -425,7 +445,7 @@ proc test1(line:string)=
 
 # discard columns();
     
-let name = "/tmp/1"
+let name = "/tmp/22"
 process(name)
 # for line in name.lines:
 #     try:

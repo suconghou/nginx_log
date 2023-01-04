@@ -18,7 +18,7 @@ int request_line_quote_end(unsigned char x, unsigned char y, unsigned char z)
     {
         return 0;
     }
-    if (x == 34 && y == 32 && (z == 50 || z == 49 || z == 48))
+    if (x == 34 && y == 32 && (z == 49 || z == 48))
     {
         return 0;
     }
