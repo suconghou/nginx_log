@@ -288,21 +288,26 @@ int parse_upstream_header_time(const char *s, int *offset, int len, char *item_v
     return parse_item_trim_space(s, offset, len, item_value, digital_dot_minus, 0, 0);
 }
 
+void byteFormat(unsigned int s, char *out)
+{
+    char *unit = "KMGTPEZY";
+    if (s < 1024)
+    {
+        sprintf(out, "%u B", s);
+        return;
+    }
+    unit--;
+    float n = (float)s;
+    while (n >= 1024)
+    {
+        n /= 1024;
+        unit++;
+    }
+    sprintf(out, "%.2f %cB", n, *unit);
+}
+
 int main()
 {
-
-    table *t = newTable(10);
-    incr(t, "hello");
-    incr(t, "hello");
-    incr(t, "world");
-    incr(t, "world");
-    incr(t, "world");
-    incr(t, "world");
-    incr(t, "hi");
-    incr(t, "hi");
-    incr(t, "hi");
-    loop(t);
-    return 0;
 
     FILE *fp = fopen("/tmp/1", "r");
     if (fp == NULL)
@@ -310,102 +315,125 @@ int main()
         return -1;
     }
     char s[8192];
-    int linecount = 0;
+
+    // 必须是2的n次方，只有这样才能使得，取余简化
+    // k % 2^n = k & (2^n - 1)
+    table *remote_addr_data = newTable(64);
+    table *remote_user_data = newTable(64);
+    table *time_local_data = newTable(64);
+    table *request_line_data = newTable(64);
+    table *status_data = newTable(64);
+    table *http_referer_data = newTable(64);
+    table *http_user_agent_data = newTable(64);
+    table *http_x_forwarded_for_data = newTable(64);
+    table *http_sent_data = newTable(64);
+    unsigned int total_bytes_sent = 0;
+    unsigned int total_lines = 0;
+
     while (fgets(s, sizeof s, fp) != NULL)
     {
         int offset = 0;
         char value[8192] = {0};
         int len = strlen(s);
-        int a = parse_remote_addr(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
-        // printf("remote_addr:%s\n", value);
 
-        a = parse_remote_user(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
-        // printf("remote_user:%s\n", value);
+        char *remote_addr;
+        char *remote_user;
+        char *time_local;
+        char *request_line;
+        char *status_code;
+        int body_bytes_sent;
+        char *http_referer;
+        char *http_user_agent;
+        char *http_x_forwarded_for;
 
-        a = parse_time_local(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
-        // printf("time_local:%s\n", value);
+        if (parse_remote_addr(s, &offset, len, value) < 0)
+        {
+            goto error_line;
+        }
+        remote_addr = malloc(strlen(value));
+        strcpy(remote_addr, value);
+        if (parse_remote_user(s, &offset, len, value) < 0)
+        {
+            goto error_line;
+        }
+        remote_user = malloc(strlen(value));
+        strcpy(remote_user, value);
+        if (parse_time_local(s, &offset, len, value) < 0)
+        {
+            goto error_line;
+        }
+        time_local = malloc(strlen(value));
+        strcpy(time_local, value);
+        if (parse_request_line(s, &offset, len, value) < 0)
+        {
+            goto error_line;
+        }
+        request_line = malloc(strlen(value));
+        strcpy(request_line, value);
+        if (parse_status_code(s, &offset, len, value) < 0)
+        {
+            goto error_line;
+        }
+        status_code = malloc(strlen(value));
+        strcpy(status_code, value);
+        if (parse_body_bytes_sent(s, &offset, len, value) < 0)
+        {
+            goto error_line;
+        }
+        // TODO may malloc
+        body_bytes_sent = atoi(value);
+        if (parse_http_referer(s, &offset, len, value) < 0)
+        {
+            goto error_line;
+        }
+        http_referer = malloc(strlen(value));
+        strcpy(http_referer, value);
+        if (parse_http_user_agent(s, &offset, len, value) < 0)
+        {
+            goto error_line;
+        }
+        http_user_agent = malloc(strlen(value));
+        strcpy(http_user_agent, value);
+        if (parse_http_x_forwarded_for(s, &offset, len, value) < 0)
+        {
+            goto error_line;
+        }
+        http_x_forwarded_for = malloc(strlen(value));
+        strcpy(http_x_forwarded_for, value);
+        // 这一行 所有都已正确解析，插入table中
+        total_lines++;
+        total_bytes_sent += body_bytes_sent;
 
-        a = parse_request_line(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
-        // printf("request_line:%s\n", value);
+        incr(remote_addr_data, remote_addr, 1);
+        incr(remote_user_data, remote_user, 1);
+        incr(time_local_data, time_local, 1);
+        incr(request_line_data, request_line, 1);
+        incr(status_data, status_code, 1);
+        incr(http_referer_data, http_referer, 1);
+        incr(http_user_agent_data, http_user_agent, 1);
+        incr(http_x_forwarded_for_data, http_x_forwarded_for, 1);
+        incr(http_sent_data, request_line, body_bytes_sent);
 
-        a = parse_status_code(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
-        // printf("status_code:%s\n", value);
+        continue;
 
-        a = parse_body_bytes_sent(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
-        // printf("body_bytes_sent:%s\n", value);
-
-        a = parse_http_referer(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
-        // printf("http_referer:%s\n", value);
-
-        a = parse_http_user_agent(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
-        // printf("http_user_agent:%s\n", value);
-
-        a = parse_http_x_forwarded_for(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
-        // printf("http_x_forwarded_for:%s\n", value);
-
-        a = parse_host(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
-        // printf("host:%s\n", value);
-
-        a = parse_request_length(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
-        // printf("request_length:%s\n", value);
-
-        a = parse_bytes_sent(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
-        // printf("bytes_sent:%s\n", value);
-
-        a = parse_upstream_addr(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
-        // printf("upstream_addr:%s\n", value);
-
-        a = parse_upstream_status(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
-        // printf("upstream_status:%s\n", value);
-
-        a = parse_request_time(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
-        // printf("request_time:%s\n", value);
-
-        a = parse_upstream_response_time(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
-        // printf("upstream_response_time:%s\n", value);
-
-        a = parse_upstream_connect_time(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
-        // printf("upstream_connect_time:%s\n", value);
-
-        a = parse_upstream_header_time(s, &offset, len, value);
-        // printf("offset:%d\n", offset);
-        // printf("index:%d\n", a);
-        // printf("upstream_header_time:%s\n", value);
+    error_line:
+        free(remote_addr);
+        free(remote_user);
+        free(time_local);
+        free(request_line);
+        free(status_code);
+        free(http_referer);
+        free(http_user_agent);
+        free(http_x_forwarded_for);
+        fprintf(stderr, "%s", s);
     }
 
+    // 分析完毕后，排序然后，打印统计数据
+
+    char str_sent[1024];
+    byteFormat(total_bytes_sent, str_sent);
+    loop(status_data);
+    unsigned int ip_count = 11;
+    printf("\n共计\e[1;34m%u\e[00m次访问\n发送总流量\e[1;32m%s\e[00m\n独立IP数\e[1;31m%u\e[00m\n", total_lines, str_sent, ip_count);
     return 0;
 }

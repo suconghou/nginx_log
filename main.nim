@@ -1,6 +1,6 @@
 
 
-import tables,sets,strformat,strutils,terminal,math
+import tables,sets,strformat,strutils,terminal
 
 
 type Line = object
@@ -11,9 +11,6 @@ const blank = {' '}
 const quotation = {'"'}
 const square_left = {' ','['}
 const square_right = {' ',']'}
-const digital_and_dot = {'0'..'9','.'}
-const digital_and_minus = {'0'..'9','-'}
-const digital_and_dot_and_minus = {'0'..'9','.','-'}
 
 # 根据条件解析，并去除前置后置x字符
 proc parse_item_trimx(this:var Line,left:set[char],right:set[char],cond:proc,strip_left:set[char]={}):string=
@@ -80,13 +77,13 @@ proc parse_item_trimx(this:var Line,left:set[char],right:set[char],cond:proc,str
     return item_value
 
 # 仅数字
-proc digital(x:char,y:char,z:char):bool = x in Digits
+proc digital(x:char,y:char,z:char):bool = x >= '\48' and x <= '\57'
 
 # 包含数字和.号
-proc digital_dot(x:char,y:char,z:char):bool = x in digital_and_dot
+proc digital_dot(x:char,y:char,z:char):bool = (x >= '\48' and x <= '\57') or x == '\46'
 
 # 包含数字和.号或-号
-proc digital_dot_minus(x:char,y:char,z:char):bool = x in digital_and_dot_and_minus
+proc digital_dot_minus(x:char,y:char,z:char):bool = (x >= '\48' and x <= '\57') or x == '\46' or x == '\45'
 
 # 匹配到],并且下一个是空格
 proc square_right_space(x:char,y:char,z:char):bool = not (x=='\93' and y=='\32')
@@ -98,10 +95,10 @@ proc not_space(x:char,y:char,z:char):bool = x!='\32'
 proc quote_string_end(x:char,y:char,z:char):bool = not (x=='\34' and y=='\32')
 
 # 当前字符是空格，上个字符是字母,不包含空格
-proc string_end(x:char,y:char,z:char):bool = not (x=='\32' and ( z in Letters ))
+proc string_end(x:char,y:char,z:char):bool = not (x=='\32' and ( (z >= '\65' and z <= '\90') or ( z >= '\97' and z <= '\122' ) ))
 
 # 当前是空格，上一个是-或者数字
-proc digital_or_none_end(x:char,y:char,z:char):bool = not ( x == '\32' and ( z in digital_and_minus ) )
+proc digital_or_none_end(x:char,y:char,z:char):bool = not ( x == '\32' and ( (z >= '\48' and z <= '\57' ) or z == '\45' ) )
 
 # 包含数字和.号
 proc parse_remote_addr(this:var Line):string=
@@ -264,6 +261,8 @@ proc process(filename:string)=
 
     let limit = 100;
     let t_width  = terminalWidth() - 16
+    let lines = total_lines.float
+    let total_bytes = total_bytes_sent.float
 
     proc print_stat_long(name:string,data:var OrderedTable[string, int],stripChar:set[char]={})=
         data.sort(proc (x,y:(string,int)):int=y[1]-x[1])
@@ -276,13 +275,13 @@ proc process(filename:string)=
                 stru = stru.alignLeft(t_width)
             else :
                 stru = stru.substr(0,t_width-1)
-            echo fmt"{stru} {num:>6.6} {num.float*100/total_lines.float:.2f}%"
+            echo fmt"{stru} {num:>6.6} {num.float*100/lines:.2f}%"
             i+=1
             n+=num
             if i > limit:
                 break
         let part1 = (fmt"{n}/{total_lines}").alignLeft(t_width)
-        echo &"前{limit}项占比\n{part1} {data.len:6.6} {n.float*100/total_lines.float:.2f}%\n"
+        echo &"前{limit}项占比\n{part1} {data.len:6.6} {n.float*100/lines:.2f}%\n"
     
     proc print_sent_long(name:string,data:var OrderedTable[string, int],stripChar:set[char]={})=
         data.sort(proc (x,y:(string,int)):int=y[1]-x[1])
@@ -296,13 +295,13 @@ proc process(filename:string)=
                 stru = stru.alignLeft(max_width)
             else :
                 stru = stru.substr(0,max_width-1)
-            echo fmt"{stru} {formatSize(num):>12.12} {num.float*100/total_bytes_sent.float:.2f}%"
+            echo fmt"{stru} {formatSize(num):>12.12} {num.float*100/total_bytes:.2f}%"
             i+=1
             n+=num
             if i > limit:
                 break
         let part1 = (fmt"{n}/{total_bytes_sent}").alignLeft(max_width)
-        echo &"前{limit}项占比\n{part1} {data.len:12.12} {n.float*100/total_bytes_sent.float:.2f}%\n"
+        echo &"前{limit}项占比\n{part1} {data.len:12.12} {n.float*100/total_bytes:.2f}%\n"
     
     proc print_code_long(code:string,data:ref OrderedTable[string, int],stripChar:set[char]={})=
         data.sort(proc (x,y:(string,int)):int=y[1]-x[1])
@@ -318,13 +317,13 @@ proc process(filename:string)=
                 stru = stru.alignLeft(t_width)
             else :
                 stru = stru.substr(0,t_width-1)
-            echo fmt"{stru} {num:>6.6} {num.float*100/total_lines.float:.2f}%"
+            echo fmt"{stru} {num:>6.6} {num.float*100/lines:.2f}%"
             i+=1
             n+=num
             if i > limit:
                 break
         let part1 = (fmt"{n}/{total_lines}").alignLeft(t_width)
-        echo &"前{limit}项占比\n{part1} {data.len:6.6} {n.float*100/total_lines.float:.2f}%\n"
+        echo &"前{limit}项占比\n{part1} {data.len:6.6} {n.float*100/lines:.2f}%\n"
 
 
     
