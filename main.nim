@@ -91,8 +91,15 @@ proc square_right_space(x:char,y:char,z:char):bool = not (x=='\93' and y=='\32')
 # 非空格
 proc not_space(x:char,y:char,z:char):bool = x!='\32' 
 
-# 双引号后面是空格
-proc quote_string_end(x:char,y:char,z:char):bool = not (x=='\34' and y=='\32')
+# 包含2个双引号，匹配到第二个双引号结束
+proc quote_string_end():proc=
+    var q = 0;
+    return proc (x:char,y:char,z:char):bool=
+        if x == '\34':
+            q+=1
+        if (x=='\34' and q==2):
+            return false
+        return true
 
 # 当前字符是空格，上个字符是字母,不包含空格
 proc string_end(x:char,y:char,z:char):bool = not (x=='\32' and ( (z >= '\65' and z <= '\90') or ( z >= '\97' and z <= '\122' ) ))
@@ -139,15 +146,15 @@ proc parse_body_bytes_sent(this:var Line):string =
 
 # 当前字符是双引号，下个字符是空格
 proc parse_http_referer(this:var Line):string =
-    return this.parse_item_trimx(blank,blank,quote_string_end,quotation)
+    return this.parse_item_trimx(blank,blank,quote_string_end(),quotation)
 
 # 当前字符是双引号，下个字符是空格
 proc parse_http_user_agent(this:var Line):string =
-    return this.parse_item_trimx(blank,blank,quote_string_end,quotation)
+    return this.parse_item_trimx(blank,blank,quote_string_end(),quotation)
 
 # 当前字符是双引号，下个字符是空格
 proc parse_http_x_forwarded_for(this:var Line):string =
-    return this.parse_item_trimx(blank,blank,quote_string_end,quotation)
+    return this.parse_item_trimx(blank,blank,quote_string_end(),quotation)
 
 # 当前字符是空格，上个字符是字母
 proc parse_host(this:var Line):string =
@@ -444,12 +451,13 @@ proc test1(line:string)=
 
 # discard columns();
     
-let name = "/tmp/22"
+let name = "/tmp/1"
 process(name)
 # for line in name.lines:
 #     try:
 #         test1(line)
 #     except:
-#         # stderr.writeLine(getCurrentExceptionMsg())
-#         stderr.writeLine(line)
+#         raise
+        # stderr.writeLine(getCurrentExceptionMsg())
+        # stderr.writeLine(line)
 

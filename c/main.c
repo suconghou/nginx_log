@@ -59,10 +59,15 @@ int not_space(unsigned char x, unsigned char y, unsigned char z)
     return x != 32;
 }
 
-// 双引号后面是空格
+// 包含2个双引号，匹配到第二个双引号结束
+int quote_count = 0;
 int quote_string_end(unsigned char x, unsigned char y, unsigned char z)
 {
-    if (x == 34 && y == 32)
+    if (x == 34)
+    {
+        quote_count++;
+    }
+    if (x == 34 && quote_count == 2)
     {
         return 0;
     }
@@ -230,16 +235,19 @@ int parse_body_bytes_sent(const char *s, int *offset, int len, char *item_value)
 
 int parse_http_referer(const char *s, int *offset, int len, char *item_value)
 {
+    quote_count = 0;
     return parse_item_trim_space(s, offset, len, item_value, quote_string_end, 0, 1);
 }
 
 int parse_http_user_agent(const char *s, int *offset, int len, char *item_value)
 {
+    quote_count = 0;
     return parse_item_trim_space(s, offset, len, item_value, quote_string_end, 0, 1);
 }
 
 int parse_http_x_forwarded_for(const char *s, int *offset, int len, char *item_value)
 {
+    quote_count = 0;
     return parse_item_trim_space(s, offset, len, item_value, quote_string_end, 0, 1);
 }
 
@@ -433,7 +441,7 @@ int main()
     char str_sent[1024];
     byteFormat(total_bytes_sent, str_sent);
     loop(status_data);
-    unsigned int ip_count = 11;
+    unsigned int ip_count = len(remote_addr_data);
     printf("\n共计\e[1;34m%u\e[00m次访问\n发送总流量\e[1;32m%s\e[00m\n独立IP数\e[1;31m%u\e[00m\n", total_lines, str_sent, ip_count);
     return 0;
 }
