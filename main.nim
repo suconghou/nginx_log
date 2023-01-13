@@ -1,6 +1,6 @@
 
 
-import tables,sets,strformat,strutils,terminal
+import os,tables,sets,strformat,strutils,terminal
 
 
 type Line = object
@@ -195,7 +195,7 @@ proc parse_upstream_header_time(this:var Line):string =
 
 
 
-proc process(filename:string)=
+proc process(filename:File|string)=
     var remote_addr_data:OrderedTable[string, int];
     var remote_user_data:OrderedTable[string,int];
     var time_local_data:OrderedTable[string,int];
@@ -260,7 +260,8 @@ proc process(filename:string)=
         except:
             stderr.writeLine(line)
     # 分析完毕后，排序然后，打印统计数据
-    
+    if total_lines < 1:
+        return
 
     let str_sent = formatSize(total_bytes_sent.int64)
     let ip_count = remote_addr_data.len
@@ -451,13 +452,17 @@ proc test1(line:string)=
 
 # discard columns();
     
-let name = "/tmp/1"
-process(name)
-# for line in name.lines:
+if paramCount()>0:
+    process(paramStr(1))
+else:
+    process(stdin)
+
+
+# for line in stdin.lines:
 #     try:
 #         test1(line)
 #     except:
 #         raise
-        # stderr.writeLine(getCurrentExceptionMsg())
-        # stderr.writeLine(line)
+#         stderr.writeLine(getCurrentExceptionMsg())
+#         stderr.writeLine(line)
 
