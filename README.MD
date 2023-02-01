@@ -14,3 +14,38 @@
                       '$host $request_length $bytes_sent $upstream_addr '
                       '$upstream_status $request_time $upstream_response_time '
                       '$upstream_connect_time $upstream_header_time';
+
+
+266M log, 746110 line
+
+refc 3.685
+
+orc 2.536
+
+arc 2.531
+
+regions 3.944
+
+
+nim 使用 orc, arc 速度更快
+
+nim --mm:orc -d:release c main
+
+
+
+## c
+
+gcc -O3 main.c
+
+Os 1.955
+
+O1 1.873
+
+O2 1.425
+
+O3 1.313
+
+
+## c++
+
+g++ -std=c++11 -Os main.cpp

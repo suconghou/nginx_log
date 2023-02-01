@@ -317,7 +317,7 @@ void byteFormat(unsigned int s, char *out)
 int main()
 {
 
-    FILE *fp = fopen("/tmp/1", "r");
+    FILE *fp = fopen("/tmp/log", "r");
     if (fp == NULL)
     {
         return -1;
@@ -337,11 +337,11 @@ int main()
     table *http_sent_data = newTable(64);
     unsigned int total_bytes_sent = 0;
     unsigned int total_lines = 0;
+    char value[8192] = {0};
 
     while (fgets(s, sizeof s, fp) != NULL)
     {
         int offset = 0;
-        char value[8192] = {0};
         int len = strlen(s);
 
         char *remote_addr;
@@ -438,10 +438,10 @@ int main()
 
     // 分析完毕后，排序然后，打印统计数据
 
-    char str_sent[1024];
+    char str_sent[64];
     byteFormat(total_bytes_sent, str_sent);
     loop(status_data);
-    unsigned int ip_count = len(remote_addr_data);
+    unsigned int ip_count = remote_addr_data->counter;
     printf("\n共计\e[1;34m%u\e[00m次访问\n发送总流量\e[1;32m%s\e[00m\n独立IP数\e[1;31m%u\e[00m\n", total_lines, str_sent, ip_count);
     return 0;
 }

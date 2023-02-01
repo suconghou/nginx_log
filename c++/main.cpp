@@ -1,4 +1,8 @@
 #include <string>
+#include <fstream>
+#include <iostream>
+
+using namespace std;
 
 typedef int (*char_is_match)(unsigned char x, unsigned char y, unsigned char z);
 
@@ -329,7 +333,96 @@ void byteFormat(unsigned int s, char *out)
     sprintf(out, "%.2f %cB", n, *unit);
 }
 
+int process(const string &filename = "")
+{
+    // ifstream是输入文件流（input file stream）的简称, std::ifstream
+    // 离开作用域后，fh文件将被析构器自动关闭
+    ifstream fh(filename); // 打开一个文件
+    if (!fh)
+    {
+        // open file failed
+        return -1;
+    }
+    string str;
+    char value[8192] = {0};
+    unsigned int total_bytes_sent = 0;
+    unsigned int total_lines = 0;
+    while (getline(fh, str))
+    {
+        auto a = Line(str.c_str());
+        if (a.parse_remote_addr(value) < 0)
+        {
+            cerr << str << endl;
+            continue;
+        }
+        string remote_addr = value;
+        if (a.parse_remote_user(value) < 0)
+        {
+            cerr << str << endl;
+            continue;
+        }
+        string remote_user = value;
+        if (a.parse_time_local(value) < 0)
+        {
+            cerr << str << endl;
+            continue;
+        }
+        string time_local = value;
+        if (a.parse_request_line(value) < 0)
+        {
+            cerr << str << endl;
+            continue;
+        }
+        string request_line = value;
+
+        if (a.parse_status_code(value) < 0)
+        {
+            cerr << str << endl;
+            continue;
+        }
+        string status_code = value;
+
+        if (a.parse_body_bytes_sent(value) < 0)
+        {
+            cerr << str << endl;
+            continue;
+        }
+        int body_bytes_sent = atoi(value);
+
+        if (a.parse_http_referer(value) < 0)
+        {
+            cerr << str << endl;
+            continue;
+        }
+        string http_referer = value;
+
+        if (a.parse_http_user_agent(value) < 0)
+        {
+            cerr << str << endl;
+            continue;
+        }
+        string http_user_agent = value;
+
+        if (a.parse_http_x_forwarded_for(value) < 0)
+        {
+            cerr << str << endl;
+            continue;
+        }
+        string http_x_forwarded_for = value;
+
+        // 这一行 所有都已正确解析，插入table中
+        total_lines++;
+        total_bytes_sent += body_bytes_sent;
+    }
+    char str_sent[64];
+    byteFormat(total_bytes_sent, str_sent);
+    unsigned int ip_count = 1;
+    printf("\n共计\e[1;34m%u\e[00m次访问\n发送总流量\e[1;32m%s\e[00m\n独立IP数\e[1;31m%u\e[00m\n", total_lines, str_sent, ip_count);
+    return 0;
+}
+
 int main()
 {
-    Line("hello");
+
+    process("/tmp/log");
 }
