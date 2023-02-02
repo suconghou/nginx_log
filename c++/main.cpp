@@ -1,8 +1,16 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <set>
+#include <array>
+#include <vector>
+#include <memory>
+#include <unordered_map>
 
 using namespace std;
+
+typedef unordered_map<string, int> strMap;
+typedef unordered_map<string, strMap> statusMap;
 
 typedef int (*char_is_match)(unsigned char x, unsigned char y, unsigned char z);
 
@@ -333,6 +341,64 @@ void byteFormat(unsigned int s, char *out)
     sprintf(out, "%.2f %cB", n, *unit);
 }
 
+vector<pair<int, string>> sort_map(strMap m)
+{
+    vector<pair<int, string>> vec;
+    for (const auto it : m)
+    {
+        vec.push_back(make_pair(it.second, it.first));
+    }
+    sort(vec.begin(), vec.end(), greater<>());
+    return vec;
+}
+
+int cmp(pair<string, strMap> a, pair<string, strMap> b)
+{
+    return a.first < b.first;
+}
+
+// pair 默认对first升序，当first相同时对second升序；
+// 我们的second无法比较，需要自定义cmp函数
+vector<pair<string, strMap>> sort_strmap(statusMap m)
+{
+    vector<pair<string, strMap>> vec;
+    for (const auto it : m)
+    {
+        vec.push_back(make_pair(it.first, it.second));
+    }
+    sort(vec.begin(), vec.end(), cmp);
+    return vec;
+}
+
+string str_strip(string ss, set<char> chars)
+{
+    ss.erase(remove_if(ss.begin(), ss.end(), [&](char ch)
+                       { return chars.find(ch) != chars.end(); }),
+             ss.end());
+    return ss;
+}
+
+string exec(const char *cmd)
+{
+    array<char, 128> buffer;
+    string result;
+    unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+    if (!pipe)
+    {
+        throw std::runtime_error("popen() failed!");
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr)
+    {
+        result += buffer.data();
+    }
+    return result;
+}
+
+int get_width()
+{
+    auto res = exec("stty size");
+}
+
 int process(const string &filename = "")
 {
     // ifstream是输入文件流（input file stream）的简称, std::ifstream
@@ -344,9 +410,21 @@ int process(const string &filename = "")
         return -1;
     }
     string str;
-    char value[8192] = {0};
+    char value[8192] = {0}; // 后面多处使用此内存池复用
     unsigned int total_bytes_sent = 0;
     unsigned int total_lines = 0;
+
+    strMap remote_addr_data;
+    strMap remote_user_data;
+    strMap time_local_data;
+    strMap request_line_data;
+    strMap status_data;
+    strMap http_referer_data;
+    strMap http_user_agent_data;
+    strMap http_x_forwarded_for_data;
+    strMap http_sent_data;
+    statusMap http_bad_code_data;
+
     while (getline(fh, str))
     {
         auto a = Line(str.c_str());
@@ -413,11 +491,236 @@ int process(const string &filename = "")
         // 这一行 所有都已正确解析，插入table中
         total_lines++;
         total_bytes_sent += body_bytes_sent;
+
+        if (remote_addr_data.find(remote_addr) != remote_addr_data.end())
+        {
+            ++remote_addr_data[remote_addr];
+        }
+        else
+        {
+            remote_addr_data[remote_addr] = 1;
+        }
+
+        if (remote_user_data.find(remote_user) != remote_user_data.end())
+        {
+            ++remote_user_data[remote_user];
+        }
+        else
+        {
+            remote_user_data[remote_user] = 1;
+        }
+
+        if (time_local_data.find(time_local) != time_local_data.end())
+        {
+            ++time_local_data[time_local];
+        }
+        else
+        {
+            time_local_data[time_local] = 1;
+        }
+
+        if (request_line_data.find(request_line) != request_line_data.end())
+        {
+            ++request_line_data[request_line];
+        }
+        else
+        {
+            request_line_data[request_line] = 1;
+        }
+
+        if (status_data.find(status_code) != status_data.end())
+        {
+            ++status_data[status_code];
+        }
+        else
+        {
+            status_data[status_code] = 1;
+        }
+
+        if (http_referer_data.find(http_referer) != http_referer_data.end())
+        {
+            ++http_referer_data[http_referer];
+        }
+        else
+        {
+            http_referer_data[http_referer] = 1;
+        }
+
+        if (http_user_agent_data.find(http_user_agent) != http_user_agent_data.end())
+        {
+            ++http_user_agent_data[http_user_agent];
+        }
+        else
+        {
+            http_user_agent_data[http_user_agent] = 1;
+        }
+
+        if (http_x_forwarded_for_data.find(http_x_forwarded_for) != http_x_forwarded_for_data.end())
+        {
+            ++http_x_forwarded_for_data[http_x_forwarded_for];
+        }
+        else
+        {
+            http_x_forwarded_for_data[http_x_forwarded_for] = 1;
+        }
+
+        if (http_sent_data.find(request_line) != http_sent_data.end())
+        {
+            http_sent_data[request_line] += body_bytes_sent;
+        }
+        else
+        {
+            http_sent_data[request_line] = body_bytes_sent;
+        }
+
+        if (status_code != "200")
+        {
+            if (http_bad_code_data.find(status_code) != http_bad_code_data.end())
+            {
+                auto &x = http_bad_code_data[status_code];
+                if (x.find(request_line) != x.end())
+                {
+                    x[request_line] += 1;
+                }
+                else
+                {
+                    x[request_line] = 1;
+                }
+            }
+            else
+            {
+                strMap badreq;
+                badreq[request_line] = 1;
+                http_bad_code_data[status_code] = badreq;
+            }
+        }
     }
-    char str_sent[64];
-    byteFormat(total_bytes_sent, str_sent);
+    byteFormat(total_bytes_sent, value);
     unsigned int ip_count = 1;
-    printf("\n共计\e[1;34m%u\e[00m次访问\n发送总流量\e[1;32m%s\e[00m\n独立IP数\e[1;31m%u\e[00m\n", total_lines, str_sent, ip_count);
+    printf("\n共计\e[1;34m%u\e[00m次访问\n发送总流量\e[1;32m%s\e[00m\n独立IP数\e[1;31m%u\e[00m\n", total_lines, value, ip_count);
+    int t_width = 158 - 16;
+    int limit = 100;
+    auto t_width_str = to_string(t_width);
+
+    auto print_stat_long = [&](string name, strMap m, set<char> chars = {})
+    {
+        auto data = sort_map(m);
+        cout << "\n\e[1;34m" << name << "\e[00m" << endl;
+        int i = 0;
+        int n = 0;
+        char buf[128] = {0};
+        for (const auto it : data)
+        {
+            auto u = it.second;
+            auto num = it.first;
+            auto stru = chars.size() > 0 ? str_strip(u, chars) : u;
+            if (stru.length() > t_width)
+            {
+                stru = stru.substr(0, t_width);
+            }
+            snprintf(value, sizeof(value), ("%-" + t_width_str + "s %6d %.2f%%").c_str(), stru.c_str(), num, (float)num * 100 / total_lines);
+            printf("%s\n", value);
+            n += num;
+            if (++i > limit)
+            {
+                break;
+            }
+        }
+        snprintf(buf, sizeof(buf), "%d/%d", n, total_lines);
+        snprintf(value, sizeof(value), ("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%").c_str(), limit, buf, m.size(), (float)n * 100 / total_lines);
+        printf("%s\n\n", value);
+    };
+
+    auto print_sent_long = [&](string name, strMap m, set<char> chars = {})
+    {
+        auto data = sort_map(m);
+        cout << "\n\e[1;34m" << name << "\e[00m" << endl;
+        int i = 0;
+        int n = 0;
+        int max_width = t_width - 6;
+        string max_width_str = to_string(max_width);
+        char buf[128] = {0};
+        for (const auto it : data)
+        {
+            auto u = it.second;
+            auto num = it.first;
+            auto stru = chars.size() > 0 ? str_strip(u, chars) : u;
+            if (stru.length() > max_width)
+            {
+                stru = stru.substr(0, max_width);
+            }
+            byteFormat(num, buf);
+            snprintf(value, sizeof(value), ("%-" + max_width_str + "s %12s %.2f%%").c_str(), stru.c_str(), buf, (float)num * 100 / total_bytes_sent);
+            printf("%s\n", value);
+            n += num;
+            if (++i > limit)
+            {
+                break;
+            }
+        }
+        snprintf(buf, sizeof(buf), "%d/%d", n, total_bytes_sent);
+        snprintf(value, sizeof(value), ("前%d项占比\n%-" + max_width_str + "s %12d %.2f%%").c_str(), limit, buf, m.size(), (float)n * 100 / total_bytes_sent);
+        printf("%s\n\n", value);
+    };
+
+    auto print_code_long = [&](string name, strMap m, set<char> chars = {})
+    {
+        auto data = sort_map(m);
+        int count = 0;
+        for (const auto it : m)
+        {
+            count += it.second;
+        }
+        cout << "\n\e[1;34m状态码" << name << ",共" << count << "次\e[00m" << endl;
+        int i = 0;
+        int n = 0;
+        char buf[128] = {0};
+        for (const auto it : data)
+        {
+            auto u = it.second;
+            auto num = it.first;
+            auto stru = chars.size() > 0 ? str_strip(u, chars) : u;
+            if (stru.length() > t_width)
+            {
+                stru = stru.substr(0, t_width);
+            }
+            snprintf(value, sizeof(value), ("%-" + t_width_str + "s %6d %.2f%%").c_str(), stru.c_str(), num, (float)num * 100 / total_lines);
+            printf("%s\n", value);
+            n += num;
+            if (++i > limit)
+            {
+                break;
+            }
+        }
+        snprintf(buf, sizeof(buf), "%d/%d", n, total_lines);
+        snprintf(value, sizeof(value), ("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%").c_str(), limit, buf, m.size(), (float)n * 100 / total_lines);
+        printf("%s\n\n", value);
+    };
+
+    print_stat_long("来访IP统计", remote_addr_data);
+
+    print_stat_long("用户统计", remote_user_data);
+
+    print_stat_long("代理IP统计", http_x_forwarded_for_data, {'"'});
+
+    print_stat_long("HTTP请求统计", request_line_data);
+
+    print_stat_long("User-Agent统计", http_user_agent_data);
+
+    print_stat_long("HTTP REFERER 统计", http_referer_data);
+
+    print_stat_long("请求时间统计", time_local_data);
+
+    print_stat_long("HTTP响应状态统计", status_data);
+
+    print_sent_long("HTTP流量占比统计", http_sent_data);
+
+    // 非200状态码
+    auto http_bad_code_data_sort = sort_strmap(http_bad_code_data);
+    for (const auto it : http_bad_code_data_sort)
+    {
+        print_code_long(it.first, it.second);
+    }
     return 0;
 }
 
