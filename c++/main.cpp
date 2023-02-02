@@ -1,11 +1,13 @@
 #include <string>
 #include <fstream>
+#include <sstream>
 #include <iostream>
 #include <set>
 #include <array>
 #include <vector>
-#include <memory>
 #include <unordered_map>
+#include <sys/ioctl.h> // ioctl() and TIOCGWINSZ
+#include <unistd.h>    // for STDOUT_FILENO
 
 using namespace std;
 
@@ -378,37 +380,15 @@ string str_strip(string ss, set<char> chars)
     return ss;
 }
 
-string exec(const char *cmd)
-{
-    array<char, 128> buffer;
-    string result;
-    unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
-    if (!pipe)
-    {
-        throw std::runtime_error("popen() failed!");
-    }
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr)
-    {
-        result += buffer.data();
-    }
-    return result;
-}
-
 int get_width()
 {
-    auto res = exec("stty size");
+    struct winsize size;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
+    return size.ws_col;
 }
 
-int process(const string &filename = "")
+int process(istream &fh)
 {
-    // ifstream是输入文件流（input file stream）的简称, std::ifstream
-    // 离开作用域后，fh文件将被析构器自动关闭
-    ifstream fh(filename); // 打开一个文件
-    if (!fh)
-    {
-        // open file failed
-        return -1;
-    }
     string str;
     char value[8192] = {0}; // 后面多处使用此内存池复用
     unsigned int total_bytes_sent = 0;
@@ -596,9 +576,9 @@ int process(const string &filename = "")
         }
     }
     byteFormat(total_bytes_sent, value);
-    unsigned int ip_count = 1;
+    unsigned int ip_count = remote_addr_data.size();
     printf("\n共计\e[1;34m%u\e[00m次访问\n发送总流量\e[1;32m%s\e[00m\n独立IP数\e[1;31m%u\e[00m\n", total_lines, value, ip_count);
-    int t_width = 158 - 16;
+    int t_width = get_width() - 16;
     int limit = 100;
     auto t_width_str = to_string(t_width);
 
@@ -724,8 +704,23 @@ int process(const string &filename = "")
     return 0;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    istream *in;
+    ifstream ifn;
 
-    process("/tmp/log");
+    if (argc < 2)
+    {
+        return process(cin);
+    }
+    // ifstream是输入文件流（input file stream）的简称, std::ifstream
+    // 离开作用域后，fh文件将被析构器自动关闭
+    ifstream fh(argv[1]); // 打开一个文件
+    if (!fh)
+    {
+        // open file failed
+        perror(argv[1]);
+        return 1;
+    }
+    return process(fh);
 }
