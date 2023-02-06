@@ -308,7 +308,7 @@ proc process(filename:File|string)=
             n+=num
             if i > limit:
                 break
-        let part1 = (fmt"{n}/{total_bytes_sent}").alignLeft(max_width)
+        let part1 = (fmt"{formatSize(n)}/{formatSize(total_bytes_sent.int64)}").alignLeft(max_width)
         echo &"前{limit}项占比\n{part1} {data.len:12.12} {n.float*100/total_bytes:.2f}%\n"
     
     proc print_code_long(code:string,data:ref OrderedTable[string, int],stripChar:set[char]={})=

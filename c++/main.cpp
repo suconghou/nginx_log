@@ -638,7 +638,11 @@ int process(istream &fh)
                 break;
             }
         }
-        snprintf(buf, sizeof(buf), "%d/%d", n, total_bytes_sent);
+        char b1[128] = {0};
+        char b2[128] = {0};
+        byteFormat(n, b1);
+        byteFormat(total_bytes_sent, b2);
+        snprintf(buf, sizeof(buf), "%s/%s", b1, b2);
         snprintf(value, sizeof(value), ("前%d项占比\n%-" + max_width_str + "s %12d %.2f%%").c_str(), limit, buf, m.size(), (float)n * 100 / total_bytes_sent);
         printf("%s\n\n", value);
     };
