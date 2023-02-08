@@ -383,7 +383,14 @@ string str_strip(string ss, set<char> chars)
 int get_width()
 {
     struct winsize size;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
+    char fds[3] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
+    for (int fd = 0; fd < sizeof(fds) / sizeof(fds[0]); fd++)
+    {
+        if (ioctl(fd, TIOCGWINSZ, &size) != -1)
+        {
+            break;
+        }
+    }
     return size.ws_col;
 }
 
@@ -582,10 +589,10 @@ int process(istream &fh)
     int limit = 100;
     auto t_width_str = to_string(t_width);
 
-    auto print_stat_long = [&](string name, strMap m, set<char> chars = {})
+    auto print_stat_long = [&](const string name, strMap m, const set<char> chars = {})
     {
-        auto data = sort_map(m);
         cout << "\n\e[1;34m" << name << "\e[00m" << endl;
+        auto data = sort_map(m);
         int i = 0;
         int n = 0;
         char buf[128] = {0};
@@ -594,11 +601,7 @@ int process(istream &fh)
             auto u = it.second;
             auto num = it.first;
             auto stru = chars.size() > 0 ? str_strip(u, chars) : u;
-            if (stru.length() > t_width)
-            {
-                stru = stru.substr(0, t_width);
-            }
-            snprintf(value, sizeof(value), ("%-" + t_width_str + "s %6d %.2f%%").c_str(), stru.c_str(), num, (float)num * 100 / total_lines);
+            snprintf(value, sizeof(value), ("%-" + t_width_str + ".*s %6d %.2f%%").c_str(), t_width, stru.c_str(), num, (float)num * 100 / total_lines);
             printf("%s\n", value);
             n += num;
             if (++i > limit)
@@ -611,10 +614,10 @@ int process(istream &fh)
         printf("%s\n\n", value);
     };
 
-    auto print_sent_long = [&](string name, strMap m, set<char> chars = {})
+    auto print_sent_long = [&](const string name, strMap m, const set<char> chars = {})
     {
-        auto data = sort_map(m);
         cout << "\n\e[1;34m" << name << "\e[00m" << endl;
+        auto data = sort_map(m);
         int i = 0;
         int n = 0;
         int max_width = t_width - 6;
@@ -625,12 +628,8 @@ int process(istream &fh)
             auto u = it.second;
             auto num = it.first;
             auto stru = chars.size() > 0 ? str_strip(u, chars) : u;
-            if (stru.length() > max_width)
-            {
-                stru = stru.substr(0, max_width);
-            }
             byteFormat(num, buf);
-            snprintf(value, sizeof(value), ("%-" + max_width_str + "s %12s %.2f%%").c_str(), stru.c_str(), buf, (float)num * 100 / total_bytes_sent);
+            snprintf(value, sizeof(value), ("%-" + max_width_str + ".*s %12s %.2f%%").c_str(), max_width, stru.c_str(), buf, (float)num * 100 / total_bytes_sent);
             printf("%s\n", value);
             n += num;
             if (++i > limit)
@@ -647,7 +646,7 @@ int process(istream &fh)
         printf("%s\n\n", value);
     };
 
-    auto print_code_long = [&](string name, strMap m, set<char> chars = {})
+    auto print_code_long = [&](const string name, strMap m, const set<char> chars = {})
     {
         auto data = sort_map(m);
         int count = 0;
@@ -664,11 +663,7 @@ int process(istream &fh)
             auto u = it.second;
             auto num = it.first;
             auto stru = chars.size() > 0 ? str_strip(u, chars) : u;
-            if (stru.length() > t_width)
-            {
-                stru = stru.substr(0, t_width);
-            }
-            snprintf(value, sizeof(value), ("%-" + t_width_str + "s %6d %.2f%%").c_str(), stru.c_str(), num, (float)num * 100 / total_lines);
+            snprintf(value, sizeof(value), ("%-" + t_width_str + ".*s %6d %.2f%%").c_str(), t_width, stru.c_str(), num, (float)num * 100 / total_lines);
             printf("%s\n", value);
             n += num;
             if (++i > limit)

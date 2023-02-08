@@ -41,6 +41,21 @@ table *newTable(int n)
     return t;
 }
 
+unsigned int forEach(table *t)
+{
+    unsigned int len = t->dataLen;
+    unsigned int num = 0;
+    for (int i = 0; i < len; i++)
+    {
+        if (t->dataArr[i] != NULL)
+        {
+            num++;
+            // printf("%d key:%s,value:%d,hcode:%u\n", i, t->dataArr[i]->key, t->dataArr[i]->value, t->dataArr[i]->hcode);
+        }
+    }
+    return num;
+}
+
 // 无需手动调用，会自动检测需要时，自动调用
 void _enlarge(table *t)
 {
@@ -72,7 +87,14 @@ int incr(table *t, char *key, int n)
     // 则必须扩容
     if (t->dataLen * 2 < t->counter * 3 || t->dataLen - t->counter < 4)
     {
+        int aa = forEach(t);
         _enlarge(t);
+        int bb = forEach(t);
+        if (aa != bb || t->counter != aa || t->counter != bb)
+        {
+            printf("before : %d %d \n", aa, t->counter);
+            printf("after : %d %d \n", aa, t->counter);
+        }
     }
     // 扩容后dataLen将会变化，之前存储的成员都会移动
     unsigned int maxHash = t->dataLen - 1; // 使用异或快速计算的参数，代表插槽数量-1
@@ -101,14 +123,24 @@ int incr(table *t, char *key, int n)
     return -1;
 }
 
-void loop(table *t)
+// 插入排序,倒序
+// 排序过后不应该在新增数据到table了
+void sort(const table *t)
 {
     unsigned int len = t->dataLen;
     for (int i = 0; i < len; i++)
     {
-        if (t->dataArr[i] != NULL)
+        tableItem *curr = t->dataArr[i + 1];
+        int preIndex = i;
+        if (curr == NULL)
         {
-            printf("key:%s,value:%d,hcode:%u\n", t->dataArr[i]->key, t->dataArr[i]->value, t->dataArr[i]->hcode);
+            continue;
         }
+        while (preIndex >= 0 && (t->dataArr[preIndex] == NULL || t->dataArr[preIndex]->value < curr->value))
+        {
+            t->dataArr[preIndex + 1] = t->dataArr[preIndex];
+            preIndex--;
+        }
+        t->dataArr[preIndex + 1] = curr;
     }
 }

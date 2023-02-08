@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <sys/ioctl.h> // ioctl() and TIOCGWINSZ
+#include <unistd.h>    // for STDOUT_FILENO
 
 #include "hash.c"
 
@@ -314,14 +317,76 @@ void byteFormat(unsigned int s, char *out)
     sprintf(out, "%.2f %cB", n, *unit);
 }
 
-int main()
+int get_width()
 {
-
-    FILE *fp = fopen("/tmp/log", "r");
-    if (fp == NULL)
+    struct winsize size;
+    char fds[3] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
+    for (int fd = 0; fd < sizeof(fds) / sizeof(fds[0]); fd++)
     {
-        return -1;
+        if (ioctl(fd, TIOCGWINSZ, &size) != -1)
+        {
+            break;
+        }
     }
+    return size.ws_col;
+}
+
+int print_stat_long(const char *name, const table *map, int total_lines, int t_width, char *t_width_str, char strip_char)
+{
+    printf("\n\e[1;34m%s\e[00m\n", name);
+    sort(map);
+    int i = 0;
+    int n = 0;
+    int limit = 150;
+    char buf[128] = {0};
+    char value[1024] = {0};
+    unsigned int len = map->dataLen;
+    for (int i = 0; i < len; i++)
+    {
+        if (map->dataArr[i] == NULL)
+        {
+            continue;
+        }
+        char *u = map->dataArr[i]->key;
+        int num = map->dataArr[i]->value;
+        char *stru = u;
+        strcpy(value, "%-");
+        strcat(value, t_width_str);
+        strcat(value, ".*s %6d %.2f%%\n");
+        printf(value, t_width, stru, num, (float)num * 100 / total_lines);
+        n += num;
+        if (++i > limit)
+        {
+            break;
+        }
+    }
+    snprintf(buf, sizeof(buf), "%d/%d", n, total_lines);
+    strcpy(value, "前%d项占比\n%-");
+    strcat(value, t_width_str);
+    strcat(value, "s %6d %.2f%%\n\n");
+    printf(value, limit, buf, map->counter, (float)n * 100 / total_lines);
+    return 0;
+}
+
+int main(int argc, char *argv[])
+{
+    FILE *input;
+
+    // FILE *input = fopen("/tmp/log", "r");
+    if (argc < 2)
+    {
+        input = stdin;
+    }
+    else
+    {
+        input = fopen(argv[1], "r");
+        if (input == NULL)
+        {
+            perror(argv[1]);
+            return -1;
+        }
+    }
+
     char s[8192];
 
     // 必须是2的n次方，只有这样才能使得，取余简化
@@ -339,7 +404,7 @@ int main()
     unsigned int total_lines = 0;
     char value[8192] = {0};
 
-    while (fgets(s, sizeof s, fp) != NULL)
+    while (fgets(s, sizeof s, input) != NULL)
     {
         int offset = 0;
         int len = strlen(s);
@@ -358,31 +423,31 @@ int main()
         {
             goto error_line;
         }
-        remote_addr = malloc(strlen(value));
+        remote_addr = malloc(strlen(value) + 1);
         strcpy(remote_addr, value);
         if (parse_remote_user(s, &offset, len, value) < 0)
         {
             goto error_line;
         }
-        remote_user = malloc(strlen(value));
+        remote_user = malloc(strlen(value) + 1);
         strcpy(remote_user, value);
         if (parse_time_local(s, &offset, len, value) < 0)
         {
             goto error_line;
         }
-        time_local = malloc(strlen(value));
+        time_local = malloc(strlen(value) + 1);
         strcpy(time_local, value);
         if (parse_request_line(s, &offset, len, value) < 0)
         {
             goto error_line;
         }
-        request_line = malloc(strlen(value));
+        request_line = malloc(strlen(value) + 1);
         strcpy(request_line, value);
         if (parse_status_code(s, &offset, len, value) < 0)
         {
             goto error_line;
         }
-        status_code = malloc(strlen(value));
+        status_code = malloc(strlen(value) + 1);
         strcpy(status_code, value);
         if (parse_body_bytes_sent(s, &offset, len, value) < 0)
         {
@@ -394,32 +459,57 @@ int main()
         {
             goto error_line;
         }
-        http_referer = malloc(strlen(value));
+        http_referer = malloc(strlen(value) + 1);
         strcpy(http_referer, value);
         if (parse_http_user_agent(s, &offset, len, value) < 0)
         {
             goto error_line;
         }
-        http_user_agent = malloc(strlen(value));
+        http_user_agent = malloc(strlen(value) + 1);
         strcpy(http_user_agent, value);
         if (parse_http_x_forwarded_for(s, &offset, len, value) < 0)
         {
             goto error_line;
         }
-        http_x_forwarded_for = malloc(strlen(value));
+        http_x_forwarded_for = malloc(strlen(value) + 1);
         strcpy(http_x_forwarded_for, value);
         // 这一行 所有都已正确解析，插入table中
         total_lines++;
         total_bytes_sent += body_bytes_sent;
 
-        incr(remote_addr_data, remote_addr, 1);
-        incr(remote_user_data, remote_user, 1);
-        incr(time_local_data, time_local, 1);
-        incr(request_line_data, request_line, 1);
-        incr(status_data, status_code, 1);
-        incr(http_referer_data, http_referer, 1);
-        incr(http_user_agent_data, http_user_agent, 1);
-        incr(http_x_forwarded_for_data, http_x_forwarded_for, 1);
+        if (incr(remote_addr_data, remote_addr, 1) >= 0)
+        {
+            free(remote_addr);
+        }
+        if (incr(remote_user_data, remote_user, 1) >= 0)
+        {
+            free(remote_user);
+        }
+        if (incr(time_local_data, time_local, 1) >= 0)
+        {
+            free(time_local);
+        }
+        if (incr(request_line_data, request_line, 1) >= 0)
+        {
+            free(request_line);
+        }
+        if (incr(status_data, status_code, 1) >= 0)
+        {
+            free(status_code);
+        }
+        if (incr(http_referer_data, http_referer, 1) >= 0)
+        {
+            free(http_referer);
+        }
+        if (incr(http_user_agent_data, http_user_agent, 1) >= 0)
+        {
+            free(http_user_agent);
+        }
+        if (incr(http_x_forwarded_for_data, http_x_forwarded_for, 1) >= 0)
+        {
+            free(http_x_forwarded_for);
+        }
+        // TODO free body_bytes_sent ?
         incr(http_sent_data, request_line, body_bytes_sent);
 
         continue;
@@ -440,8 +530,30 @@ int main()
 
     char str_sent[64];
     byteFormat(total_bytes_sent, str_sent);
-    loop(status_data);
     unsigned int ip_count = remote_addr_data->counter;
     printf("\n共计\e[1;34m%u\e[00m次访问\n发送总流量\e[1;32m%s\e[00m\n独立IP数\e[1;31m%u\e[00m\n", total_lines, str_sent, ip_count);
+    int t_width = get_width() - 16;
+    int limit = 100;
+    char t_width_str[16];
+    sprintf(t_width_str, "%d", t_width);
+    printf("%d remote_addr_data \n", remote_addr_data->counter);
+    printf("%d http_user_agent_data \n", http_user_agent_data->counter);
+    printf("%d http_x_forwarded_for_data \n", http_x_forwarded_for_data->counter);
+    printf("%d request_line_data \n", request_line_data->counter);
+    print_stat_long("来访IP统计", remote_addr_data, total_lines, t_width, t_width_str, 0);
+
+    print_stat_long("用户统计", remote_user_data, total_lines, t_width, t_width_str, 0);
+
+    print_stat_long("代理IP统计", http_x_forwarded_for_data, total_lines, t_width, t_width_str, '"');
+
+    print_stat_long("HTTP请求统计", request_line_data, total_lines, t_width, t_width_str, 0);
+
+    print_stat_long("User-Agent统计", http_user_agent_data, total_lines, t_width, t_width_str, 0);
+
+    print_stat_long("HTTP REFERER 统计", http_referer_data, total_lines, t_width, t_width_str, 0);
+
+    print_stat_long("请求时间统计", time_local_data, total_lines, t_width, t_width_str, 0);
+
+    print_stat_long("HTTP响应状态统计", status_data, total_lines, t_width, t_width_str, 0);
     return 0;
 }
