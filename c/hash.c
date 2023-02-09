@@ -67,14 +67,15 @@ void _enlarge(table *t)
         if (t->dataArr[i] != NULL)
         {
             // 旧插槽有数据，则需要移动
-            unsigned int h = t->dataArr[i]->hcode & maxHash;
-            while (data[h] != NULL)
+            unsigned int j = t->dataArr[i]->hcode & maxHash;
+            while (data[j] != NULL)
             {
-                h = (h + 1) & maxHash;
+                j = (j + 1) & maxHash;
             }
-            data[h] = t->dataArr[i];
+            data[j] = t->dataArr[i];
         }
     }
+    free(t->dataArr);
     t->dataArr = data;
     t->dataLen = l * 2;
 }
@@ -87,14 +88,7 @@ int incr(table *t, char *key, int n)
     // 则必须扩容
     if (t->dataLen * 2 < t->counter * 3 || t->dataLen - t->counter < 4)
     {
-        int aa = forEach(t);
         _enlarge(t);
-        int bb = forEach(t);
-        if (aa != bb || t->counter != aa || t->counter != bb)
-        {
-            printf("before : %d %d \n", aa, t->counter);
-            printf("after : %d %d \n", aa, t->counter);
-        }
     }
     // 扩容后dataLen将会变化，之前存储的成员都会移动
     unsigned int maxHash = t->dataLen - 1; // 使用异或快速计算的参数，代表插槽数量-1

@@ -335,9 +335,9 @@ int print_stat_long(const char *name, const table *map, int total_lines, int t_w
 {
     printf("\n\e[1;34m%s\e[00m\n", name);
     sort(map);
-    int i = 0;
+    int found = 0;
     int n = 0;
-    int limit = 150;
+    int limit = 100;
     char buf[128] = {0};
     char value[1024] = {0};
     unsigned int len = map->dataLen;
@@ -355,7 +355,7 @@ int print_stat_long(const char *name, const table *map, int total_lines, int t_w
         strcat(value, ".*s %6d %.2f%%\n");
         printf(value, t_width, stru, num, (float)num * 100 / total_lines);
         n += num;
-        if (++i > limit)
+        if (++found >= limit)
         {
             break;
         }
@@ -391,13 +391,13 @@ int main(int argc, char *argv[])
 
     // 必须是2的n次方，只有这样才能使得，取余简化
     // k % 2^n = k & (2^n - 1)
-    table *remote_addr_data = newTable(64);
+    table *remote_addr_data = newTable(1024);
     table *remote_user_data = newTable(64);
-    table *time_local_data = newTable(64);
-    table *request_line_data = newTable(64);
+    table *time_local_data = newTable(4096);
+    table *request_line_data = newTable(4096);
     table *status_data = newTable(64);
-    table *http_referer_data = newTable(64);
-    table *http_user_agent_data = newTable(64);
+    table *http_referer_data = newTable(256);
+    table *http_user_agent_data = newTable(256);
     table *http_x_forwarded_for_data = newTable(64);
     table *http_sent_data = newTable(64);
     unsigned int total_bytes_sent = 0;
@@ -453,7 +453,6 @@ int main(int argc, char *argv[])
         {
             goto error_line;
         }
-        // TODO may malloc
         body_bytes_sent = atoi(value);
         if (parse_http_referer(s, &offset, len, value) < 0)
         {
@@ -491,7 +490,14 @@ int main(int argc, char *argv[])
         }
         if (incr(request_line_data, request_line, 1) >= 0)
         {
-            free(request_line);
+            if (incr(http_sent_data, request_line, body_bytes_sent) >= 0)
+            {
+                free(request_line);
+            }
+        }
+        else
+        {
+            incr(http_sent_data, request_line, body_bytes_sent);
         }
         if (incr(status_data, status_code, 1) >= 0)
         {
@@ -509,9 +515,6 @@ int main(int argc, char *argv[])
         {
             free(http_x_forwarded_for);
         }
-        // TODO free body_bytes_sent ?
-        incr(http_sent_data, request_line, body_bytes_sent);
-
         continue;
 
     error_line:
@@ -536,10 +539,7 @@ int main(int argc, char *argv[])
     int limit = 100;
     char t_width_str[16];
     sprintf(t_width_str, "%d", t_width);
-    printf("%d remote_addr_data \n", remote_addr_data->counter);
-    printf("%d http_user_agent_data \n", http_user_agent_data->counter);
-    printf("%d http_x_forwarded_for_data \n", http_x_forwarded_for_data->counter);
-    printf("%d request_line_data \n", request_line_data->counter);
+
     print_stat_long("来访IP统计", remote_addr_data, total_lines, t_width, t_width_str, 0);
 
     print_stat_long("用户统计", remote_user_data, total_lines, t_width, t_width_str, 0);

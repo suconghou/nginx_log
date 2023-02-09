@@ -286,7 +286,7 @@ proc process(filename:File|string)=
             echo fmt"{stru} {num:>6.6} {num.float*100/lines:.2f}%"
             i+=1
             n+=num
-            if i > limit:
+            if i >= limit:
                 break
         let part1 = (fmt"{n}/{total_lines}").alignLeft(t_width)
         echo &"前{limit}项占比\n{part1} {data.len:6.6} {n.float*100/lines:.2f}%\n"
@@ -306,7 +306,7 @@ proc process(filename:File|string)=
             echo fmt"{stru} {formatSize(num):>12.12} {num.float*100/total_bytes:.2f}%"
             i+=1
             n+=num
-            if i > limit:
+            if i >= limit:
                 break
         let part1 = (fmt"{formatSize(n)}/{formatSize(total_bytes_sent.int64)}").alignLeft(max_width)
         echo &"前{limit}项占比\n{part1} {data.len:12.12} {n.float*100/total_bytes:.2f}%\n"
@@ -328,7 +328,7 @@ proc process(filename:File|string)=
             echo fmt"{stru} {num:>6.6} {num.float*100/lines:.2f}%"
             i+=1
             n+=num
-            if i > limit:
+            if i >= limit:
                 break
         let part1 = (fmt"{n}/{total_lines}").alignLeft(t_width)
         echo &"前{limit}项占比\n{part1} {data.len:6.6} {n.float*100/lines:.2f}%\n"

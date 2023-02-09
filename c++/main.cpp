@@ -604,7 +604,7 @@ int process(istream &fh)
             snprintf(value, sizeof(value), ("%-" + t_width_str + ".*s %6d %.2f%%").c_str(), t_width, stru.c_str(), num, (float)num * 100 / total_lines);
             printf("%s\n", value);
             n += num;
-            if (++i > limit)
+            if (++i >= limit)
             {
                 break;
             }
@@ -632,7 +632,7 @@ int process(istream &fh)
             snprintf(value, sizeof(value), ("%-" + max_width_str + ".*s %12s %.2f%%").c_str(), max_width, stru.c_str(), buf, (float)num * 100 / total_bytes_sent);
             printf("%s\n", value);
             n += num;
-            if (++i > limit)
+            if (++i >= limit)
             {
                 break;
             }
@@ -666,7 +666,7 @@ int process(istream &fh)
             snprintf(value, sizeof(value), ("%-" + t_width_str + ".*s %6d %.2f%%").c_str(), t_width, stru.c_str(), num, (float)num * 100 / total_lines);
             printf("%s\n", value);
             n += num;
-            if (++i > limit)
+            if (++i >= limit)
             {
                 break;
             }
