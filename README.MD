@@ -33,6 +33,8 @@ nim --mm:orc -d:release c main
 
 
 
+TODO 优化排序算法
+
 ## c
 
 gcc -O3 main.c

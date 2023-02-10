@@ -35,7 +35,7 @@ uint32_t hash(const char *s)
 table *newTable(int n)
 {
     table *t = (table *)malloc(sizeof(table));
-    t->dataArr = (tableItem **)calloc(n, sizeof(tableItem));
+    t->dataArr = (tableItem **)calloc(n, sizeof(tableItem *));
     t->counter = 0;
     t->dataLen = n;
     return t;
@@ -60,7 +60,7 @@ unsigned int forEach(table *t)
 void _enlarge(table *t)
 {
     unsigned int l = t->dataLen;
-    tableItem **data = (tableItem **)calloc(l * 2, sizeof(tableItem));
+    tableItem **data = (tableItem **)calloc(l * 2, sizeof(tableItem *));
     unsigned int maxHash = l * 2 - 1;
     for (int i = 0; i < l; i++)
     {
@@ -119,22 +119,64 @@ int incr(table *t, char *key, int n)
 
 // 插入排序,倒序
 // 排序过后不应该在新增数据到table了
-void sort(const table *t)
+tableItem **sort22(table *t)
 {
-    unsigned int len = t->dataLen;
-    for (int i = 0; i < len; i++)
+    int num = t->counter;
+    tableItem **data = (tableItem **)calloc(num, sizeof(tableItem *));
+    int index = 0;
+    for (int i = 0; i < t->dataLen && index < num; i++)
     {
-        tableItem *curr = t->dataArr[i + 1];
-        int preIndex = i;
-        if (curr == NULL)
+        if (t->dataArr[i] != NULL)
         {
-            continue;
+            data[index] = t->dataArr[i];
+            index++;
         }
-        while (preIndex >= 0 && (t->dataArr[preIndex] == NULL || t->dataArr[preIndex]->value < curr->value))
-        {
-            t->dataArr[preIndex + 1] = t->dataArr[preIndex];
-            preIndex--;
-        }
-        t->dataArr[preIndex + 1] = curr;
     }
+    free(t->dataArr);
+    free(t);
+    // 然后使用希尔排序
+    int gap, i, j;
+    tableItem *temp;
+    for (gap = num >> 1; gap > 0; gap >>= 1)
+    {
+        for (i = gap; i < num; i++)
+        {
+            temp = data[i];
+            for (j = i - gap; j >= 0 && data[j]->value < temp->value; j -= gap)
+            {
+                data[j + gap] = data[j];
+            }
+            data[j + gap] = temp;
+        }
+    }
+    return data;
+}
+
+int compare_function(const void *a, const void *b)
+{
+    // 注意，这里不是 tableItem *x = (tableItem *)a;
+    tableItem *x = *(tableItem **)a;
+    tableItem *y = *(tableItem **)b;
+    return (y->value - x->value) - (x->value - y->value);
+}
+
+// 插入排序,倒序
+// 排序过后不应该在新增数据到table了
+tableItem **sort(table *t)
+{
+    int num = t->counter;
+    tableItem **data = (tableItem **)calloc(num, sizeof(tableItem *));
+    int index = 0;
+    for (int i = 0; i < t->dataLen && index < num; i++)
+    {
+        if (t->dataArr[i] != NULL)
+        {
+            data[index] = t->dataArr[i];
+            index++;
+        }
+    }
+    free(t->dataArr);
+    free(t);
+    qsort(data, num, sizeof(tableItem *), &compare_function);
+    return data;
 }

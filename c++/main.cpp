@@ -595,23 +595,20 @@ int process(istream &fh)
         auto data = sort_map(m);
         int i = 0;
         int n = 0;
-        char buf[128] = {0};
         for (const auto it : data)
         {
             auto u = it.second;
             auto num = it.first;
             auto stru = chars.size() > 0 ? str_strip(u, chars) : u;
-            snprintf(value, sizeof(value), ("%-" + t_width_str + ".*s %6d %.2f%%").c_str(), t_width, stru.c_str(), num, (float)num * 100 / total_lines);
-            printf("%s\n", value);
+            printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, stru.c_str(), num, (float)num * 100 / total_lines);
             n += num;
             if (++i >= limit)
             {
                 break;
             }
         }
-        snprintf(buf, sizeof(buf), "%d/%d", n, total_lines);
-        snprintf(value, sizeof(value), ("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%").c_str(), limit, buf, m.size(), (float)n * 100 / total_lines);
-        printf("%s\n\n", value);
+        snprintf(value, sizeof(value), "%d/%d", n, total_lines);
+        printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, m.size(), (float)n * 100 / total_lines);
     };
 
     auto print_sent_long = [&](const string name, strMap m, const set<char> chars = {})
@@ -622,15 +619,13 @@ int process(istream &fh)
         int n = 0;
         int max_width = t_width - 6;
         string max_width_str = to_string(max_width);
-        char buf[128] = {0};
         for (const auto it : data)
         {
             auto u = it.second;
             auto num = it.first;
             auto stru = chars.size() > 0 ? str_strip(u, chars) : u;
-            byteFormat(num, buf);
-            snprintf(value, sizeof(value), ("%-" + max_width_str + ".*s %12s %.2f%%").c_str(), max_width, stru.c_str(), buf, (float)num * 100 / total_bytes_sent);
-            printf("%s\n", value);
+            byteFormat(num, value);
+            printf(("%-" + max_width_str + ".*s %12s %.2f%%\n").c_str(), max_width, stru.c_str(), value, (float)num * 100 / total_bytes_sent);
             n += num;
             if (++i >= limit)
             {
@@ -641,9 +636,8 @@ int process(istream &fh)
         char b2[128] = {0};
         byteFormat(n, b1);
         byteFormat(total_bytes_sent, b2);
-        snprintf(buf, sizeof(buf), "%s/%s", b1, b2);
-        snprintf(value, sizeof(value), ("前%d项占比\n%-" + max_width_str + "s %12d %.2f%%").c_str(), limit, buf, m.size(), (float)n * 100 / total_bytes_sent);
-        printf("%s\n\n", value);
+        snprintf(value, sizeof(value), "%s/%s", b1, b2);
+        printf(("前%d项占比\n%-" + max_width_str + "s %12d %.2f%%\n\n").c_str(), limit, value, m.size(), (float)n * 100 / total_bytes_sent);
     };
 
     auto print_code_long = [&](const string name, strMap m, const set<char> chars = {})
@@ -657,23 +651,20 @@ int process(istream &fh)
         cout << "\n\e[1;34m状态码" << name << ",共" << count << "次\e[00m" << endl;
         int i = 0;
         int n = 0;
-        char buf[128] = {0};
         for (const auto it : data)
         {
             auto u = it.second;
             auto num = it.first;
             auto stru = chars.size() > 0 ? str_strip(u, chars) : u;
-            snprintf(value, sizeof(value), ("%-" + t_width_str + ".*s %6d %.2f%%").c_str(), t_width, stru.c_str(), num, (float)num * 100 / total_lines);
-            printf("%s\n", value);
+            printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, stru.c_str(), num, (float)num * 100 / total_lines);
             n += num;
             if (++i >= limit)
             {
                 break;
             }
         }
-        snprintf(buf, sizeof(buf), "%d/%d", n, total_lines);
-        snprintf(value, sizeof(value), ("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%").c_str(), limit, buf, m.size(), (float)n * 100 / total_lines);
-        printf("%s\n\n", value);
+        snprintf(value, sizeof(value), "%d/%d", n, total_lines);
+        printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, m.size(), (float)n * 100 / total_lines);
     };
 
     print_stat_long("来访IP统计", remote_addr_data);

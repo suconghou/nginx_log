@@ -331,29 +331,24 @@ int get_width()
     return size.ws_col;
 }
 
-int print_stat_long(const char *name, const table *map, int total_lines, int t_width, char *t_width_str, char strip_char)
+int print_stat_long(const char *name, table *map, int total_lines, int t_width, char *t_width_str, char strip_char)
 {
     printf("\n\e[1;34m%s\e[00m\n", name);
-    sort(map);
+    unsigned int len = map->counter;
+    tableItem **data = sort(map);
     int found = 0;
     int n = 0;
     int limit = 100;
     char buf[128] = {0};
     char value[1024] = {0};
-    unsigned int len = map->dataLen;
     for (int i = 0; i < len; i++)
     {
-        if (map->dataArr[i] == NULL)
-        {
-            continue;
-        }
-        char *u = map->dataArr[i]->key;
-        int num = map->dataArr[i]->value;
-        char *stru = u;
+        char *u = data[i]->key;
+        int num = data[i]->value;
         strcpy(value, "%-");
         strcat(value, t_width_str);
         strcat(value, ".*s %6d %.2f%%\n");
-        printf(value, t_width, stru, num, (float)num * 100 / total_lines);
+        printf(value, t_width, u, num, (float)num * 100 / total_lines);
         n += num;
         if (++found >= limit)
         {
@@ -364,7 +359,7 @@ int print_stat_long(const char *name, const table *map, int total_lines, int t_w
     strcpy(value, "前%d项占比\n%-");
     strcat(value, t_width_str);
     strcat(value, "s %6d %.2f%%\n\n");
-    printf(value, limit, buf, map->counter, (float)n * 100 / total_lines);
+    printf(value, limit, buf, len, (float)n * 100 / total_lines);
     return 0;
 }
 
@@ -372,7 +367,7 @@ int main(int argc, char *argv[])
 {
     FILE *input;
 
-    // FILE *input = fopen("/tmp/log", "r");
+    // FILE *input = fopen("/tmp/1", "r");
     if (argc < 2)
     {
         input = stdin;
@@ -391,14 +386,14 @@ int main(int argc, char *argv[])
 
     // 必须是2的n次方，只有这样才能使得，取余简化
     // k % 2^n = k & (2^n - 1)
-    table *remote_addr_data = newTable(1024);
+    table *remote_addr_data = newTable(4096);
     table *remote_user_data = newTable(64);
-    table *time_local_data = newTable(4096);
-    table *request_line_data = newTable(4096);
+    table *time_local_data = newTable(8192);
+    table *request_line_data = newTable(8192);
     table *status_data = newTable(64);
-    table *http_referer_data = newTable(256);
-    table *http_user_agent_data = newTable(256);
-    table *http_x_forwarded_for_data = newTable(64);
+    table *http_referer_data = newTable(4096);
+    table *http_user_agent_data = newTable(4096);
+    table *http_x_forwarded_for_data = newTable(1024);
     table *http_sent_data = newTable(64);
     unsigned int total_bytes_sent = 0;
     unsigned int total_lines = 0;
@@ -409,15 +404,15 @@ int main(int argc, char *argv[])
         int offset = 0;
         int len = strlen(s);
 
-        char *remote_addr;
-        char *remote_user;
-        char *time_local;
-        char *request_line;
-        char *status_code;
+        char *remote_addr = NULL;
+        char *remote_user = NULL;
+        char *time_local = NULL;
+        char *request_line = NULL;
+        char *status_code = NULL;
+        char *http_referer = NULL;
+        char *http_user_agent = NULL;
+        char *http_x_forwarded_for = NULL;
         int body_bytes_sent;
-        char *http_referer;
-        char *http_user_agent;
-        char *http_x_forwarded_for;
 
         if (parse_remote_addr(s, &offset, len, value) < 0)
         {
