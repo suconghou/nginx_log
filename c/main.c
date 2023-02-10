@@ -331,45 +331,45 @@ int get_width()
     return size.ws_col;
 }
 
-int print_stat_long(const char *name, table *map, int total_lines, int t_width, char *t_width_str)
+int print_stat_long(const char *name, table *map, unsigned int total_lines, int t_width, char *t_width_str)
 {
     printf("\n\e[1;34m%s\e[00m\n", name);
     unsigned int len = map->counter;
     tableItem **data = sort(map);
-    int n = 0;
+    unsigned long n = 0;
     int limit = 100;
     char buf[128] = {0};
     char value[1024] = {0};
     for (int i = 0; i < len; i++)
     {
         char *u = data[i]->key;
-        int num = data[i]->value;
+        unsigned int num = data[i]->value;
         strcpy(value, "%-");
         strcat(value, t_width_str);
         strcat(value, ".*s %6d %.2f%%\n");
-        printf(value, t_width, u, num, (float)num * 100 / total_lines);
+        printf(value, t_width, u, num, ((double)num / (double)total_lines) * 100);
         n += num;
         if (i >= limit - 1)
         {
             break;
         }
     }
-    snprintf(buf, sizeof(buf), "%d/%d", n, total_lines);
+    snprintf(buf, sizeof(buf), "%lu/%d", n, total_lines);
     strcpy(value, "前%d项占比\n%-");
     strcat(value, t_width_str);
     strcat(value, "s %6d %.2f%%\n\n");
-    printf(value, limit, buf, len, (float)n * 100 / total_lines);
+    printf(value, limit, buf, len, ((double)n / (double)total_lines) * 100);
     return 0;
 }
 
-int print_sent_long(const char *name, table *map, int total_lines, int total_bytes_sent, int t_width)
+int print_sent_long(const char *name, table *map, unsigned int total_lines, unsigned long total_bytes_sent, int t_width)
 {
     printf("\n\e[1;34m%s\e[00m\n", name);
     unsigned int len = map->counter;
     tableItem **data = sort(map);
     int max_width = t_width - 6;
     int limit = 100;
-    int n = 0;
+    unsigned long n = 0;
     char buf[128] = {0};
     char value[1024] = {0};
     char max_width_str[12];
@@ -378,12 +378,12 @@ int print_sent_long(const char *name, table *map, int total_lines, int total_byt
     for (int i = 0; i < len; i++)
     {
         char *u = data[i]->key;
-        int num = data[i]->value;
+        unsigned int num = data[i]->value;
         strcpy(value, "%-");
         strcat(value, max_width_str);
         strcat(value, ".*s %12s %.2f%%\n");
         byteFormat(num, buf);
-        printf(value, max_width, u, buf, (float)num * 100 / total_bytes_sent);
+        printf(value, max_width, u, buf, ((double)num / (double)total_bytes_sent) * 100);
         n += num;
         if (i >= limit - 1)
         {
@@ -398,13 +398,13 @@ int print_sent_long(const char *name, table *map, int total_lines, int total_byt
     strcpy(value, "前%d项占比\n%-");
     strcat(value, max_width_str);
     strcat(value, "s %12d %.2f%%\n\n");
-    printf(value, limit, buf, len, (float)n * 100 / total_bytes_sent);
+    printf(value, limit, buf, len, ((double)n / (double)total_bytes_sent) * 100);
     return 0;
 }
 
-int print_code_long(int status_code, table *map, int total_lines, int t_width, char *t_width_str)
+int print_code_long(int status_code, table *map, unsigned int total_lines, int t_width, char *t_width_str)
 {
-    int total = 0;
+    unsigned int total = 0;
     unsigned int len = map->counter;
     tableItem **data = sort(map);
     for (int i = 0; i < len; i++)
@@ -412,29 +412,29 @@ int print_code_long(int status_code, table *map, int total_lines, int t_width, c
         total += data[i]->value;
     }
     printf("\n\e[1;34m状态码%d,共%d次\e[00m\n", status_code, total);
-    int n = 0;
+    unsigned long n = 0;
     int limit = 100;
     char buf[128] = {0};
     char value[1024] = {0};
     for (int i = 0; i < len; i++)
     {
         char *u = data[i]->key;
-        int num = data[i]->value;
+        unsigned int num = data[i]->value;
         strcpy(value, "%-");
         strcat(value, t_width_str);
         strcat(value, ".*s %6d %.2f%%\n");
-        printf(value, t_width, u, num, (float)num * 100 / total_lines);
+        printf(value, t_width, u, num, ((double)num / (double)total_lines) * 100);
         n += num;
         if (i >= limit - 1)
         {
             break;
         }
     }
-    snprintf(buf, sizeof(buf), "%d/%d", n, total_lines);
+    snprintf(buf, sizeof(buf), "%lu/%d", n, total_lines);
     strcpy(value, "前%d项占比\n%-");
     strcat(value, t_width_str);
     strcat(value, "s %6d %.2f%%\n\n");
-    printf(value, limit, buf, len, (float)n * 100 / total_lines);
+    printf(value, limit, buf, len, ((double)n / (double)total_lines) * 100);
     return 0;
 }
 
@@ -470,7 +470,7 @@ int main(int argc, char *argv[])
     table *http_user_agent_data = newTable(4096);
     table *http_x_forwarded_for_data = newTable(1024);
     table *http_sent_data = newTable(64);
-    unsigned int total_bytes_sent = 0;
+    unsigned long total_bytes_sent = 0;
     unsigned int total_lines = 0;
     char value[8192] = {0};
     table *http_bad_code_data[999] = {NULL};

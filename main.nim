@@ -206,7 +206,7 @@ proc process(filename:File|string)=
     var http_x_forwarded_for_data:OrderedTable[string,int];
     var http_sent_data:OrderedTable[string,int];
     var http_bad_code_data:OrderedTable[string,ref OrderedTable[string,int]];
-    var total_bytes_sent :uint = 0;
+    var total_bytes_sent :uint64 = 0;
     var total_lines:uint = 0;
 
 

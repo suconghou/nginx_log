@@ -2,7 +2,6 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
-#include <set>
 #include <array>
 #include <vector>
 #include <unordered_map>
@@ -390,7 +389,7 @@ int process(istream &fh)
 {
     string str;
     char value[8192] = {0}; // 后面多处使用此内存池复用
-    unsigned int total_bytes_sent = 0;
+    unsigned long total_bytes_sent = 0;
     unsigned int total_lines = 0;
 
     strMap remote_addr_data;
@@ -591,7 +590,7 @@ int process(istream &fh)
         {
             auto u = it.second;
             auto num = it.first;
-            printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, (float)num * 100 / total_lines);
+            printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, ((double)num / (double)total_lines) * 100);
             n += num;
             if (++i >= limit)
             {
@@ -599,7 +598,7 @@ int process(istream &fh)
             }
         }
         snprintf(value, sizeof(value), "%d/%d", n, total_lines);
-        printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, m.size(), (float)n * 100 / total_lines);
+        printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, m.size(), ((double)n / (double)total_lines) * 100);
     };
 
     auto print_sent_long = [&](const string name, strMap m)
@@ -615,7 +614,7 @@ int process(istream &fh)
             auto u = it.second;
             auto num = it.first;
             byteFormat(num, value);
-            printf(("%-" + max_width_str + ".*s %12s %.2f%%\n").c_str(), max_width, u.c_str(), value, (float)num * 100 / total_bytes_sent);
+            printf(("%-" + max_width_str + ".*s %12s %.2f%%\n").c_str(), max_width, u.c_str(), value, ((double)num / (double)total_bytes_sent) * 100);
             n += num;
             if (++i >= limit)
             {
@@ -627,7 +626,7 @@ int process(istream &fh)
         byteFormat(n, b1);
         byteFormat(total_bytes_sent, b2);
         snprintf(value, sizeof(value), "%s/%s", b1, b2);
-        printf(("前%d项占比\n%-" + max_width_str + "s %12d %.2f%%\n\n").c_str(), limit, value, m.size(), (float)n * 100 / total_bytes_sent);
+        printf(("前%d项占比\n%-" + max_width_str + "s %12d %.2f%%\n\n").c_str(), limit, value, m.size(), ((double)n / (double)total_bytes_sent) * 100);
     };
 
     auto print_code_long = [&](const string name, strMap m)
@@ -645,7 +644,7 @@ int process(istream &fh)
         {
             auto u = it.second;
             auto num = it.first;
-            printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, (float)num * 100 / total_lines);
+            printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, ((double)num / (double)total_lines) * 100);
             n += num;
             if (++i >= limit)
             {
@@ -653,7 +652,7 @@ int process(istream &fh)
             }
         }
         snprintf(value, sizeof(value), "%d/%d", n, total_lines);
-        printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, m.size(), (float)n * 100 / total_lines);
+        printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, m.size(), ((double)n / (double)total_lines) * 100);
     };
 
     print_stat_long("来访IP统计", remote_addr_data);
