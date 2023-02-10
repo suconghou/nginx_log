@@ -272,13 +272,13 @@ proc process(filename:File|string)=
     let lines = total_lines.float
     let total_bytes = total_bytes_sent.float
 
-    proc print_stat_long(name:string,data:var OrderedTable[string, int],stripChar:set[char]={})=
+    proc print_stat_long(name:string,data:var OrderedTable[string, int])=
         data.sort(proc (x,y:(string,int)):int=y[1]-x[1])
         echo &"\n\e[1;34m{name}\e[00m"
         var i = 0;
         var n = 0;
         for u,num in data:
-            var stru = if stripChar.len > 0 : u.strip(true,true,stripChar) else: u
+            var stru = u
             if stru.len < t_width :
                 stru = stru.alignLeft(t_width)
             else :
@@ -291,14 +291,14 @@ proc process(filename:File|string)=
         let part1 = (fmt"{n}/{total_lines}").alignLeft(t_width)
         echo &"前{limit}项占比\n{part1} {data.len:6.6} {n.float*100/lines:.2f}%\n"
     
-    proc print_sent_long(name:string,data:var OrderedTable[string, int],stripChar:set[char]={})=
+    proc print_sent_long(name:string,data:var OrderedTable[string, int])=
         data.sort(proc (x,y:(string,int)):int=y[1]-x[1])
         echo &"\n\e[1;34m{name}\e[00m"
         var i = 0;
         var n = 0;
         let max_width = t_width - 6
         for u,num in data:
-            var stru = if stripChar.len > 0 : u.strip(true,true,stripChar) else: u
+            var stru = u
             if stru.len < max_width :
                 stru = stru.alignLeft(max_width)
             else :
@@ -311,7 +311,7 @@ proc process(filename:File|string)=
         let part1 = (fmt"{formatSize(n)}/{formatSize(total_bytes_sent.int64)}").alignLeft(max_width)
         echo &"前{limit}项占比\n{part1} {data.len:12.12} {n.float*100/total_bytes:.2f}%\n"
     
-    proc print_code_long(code:string,data:ref OrderedTable[string, int],stripChar:set[char]={})=
+    proc print_code_long(code:string,data:ref OrderedTable[string, int])=
         data.sort(proc (x,y:(string,int)):int=y[1]-x[1])
         var count = 0;
         for n in data.values:
@@ -320,7 +320,7 @@ proc process(filename:File|string)=
         var i = 0;
         var n = 0;
         for u,num in data:
-            var stru = if stripChar.len > 0 : u.strip(true,true,stripChar) else: u
+            var stru = u
             if stru.len < t_width :
                 stru = stru.alignLeft(t_width)
             else :
@@ -342,7 +342,7 @@ proc process(filename:File|string)=
     print_stat_long("用户统计",remote_user_data)
 
     # 代理IP统计
-    print_stat_long("代理IP统计",http_x_forwarded_for_data,{'"'})
+    print_stat_long("代理IP统计",http_x_forwarded_for_data)
 
     # HTTP请求统计
     print_stat_long("HTTP请求统计",request_line_data)

@@ -331,7 +331,7 @@ int get_width()
     return size.ws_col;
 }
 
-int print_stat_long(const char *name, table *map, int total_lines, int t_width, char *t_width_str, char strip_char)
+int print_stat_long(const char *name, table *map, int total_lines, int t_width, char *t_width_str)
 {
     printf("\n\e[1;34m%s\e[00m\n", name);
     unsigned int len = map->counter;
@@ -402,6 +402,42 @@ int print_sent_long(const char *name, table *map, int total_lines, int total_byt
     return 0;
 }
 
+int print_code_long(int status_code, table *map, int total_lines, int t_width, char *t_width_str)
+{
+    int total = 0;
+    unsigned int len = map->counter;
+    tableItem **data = sort(map);
+    for (int i = 0; i < len; i++)
+    {
+        total += data[i]->value;
+    }
+    printf("\n\e[1;34m状态码%d,共%d次\e[00m\n", status_code, total);
+    int n = 0;
+    int limit = 100;
+    char buf[128] = {0};
+    char value[1024] = {0};
+    for (int i = 0; i < len; i++)
+    {
+        char *u = data[i]->key;
+        int num = data[i]->value;
+        strcpy(value, "%-");
+        strcat(value, t_width_str);
+        strcat(value, ".*s %6d %.2f%%\n");
+        printf(value, t_width, u, num, (float)num * 100 / total_lines);
+        n += num;
+        if (i >= limit - 1)
+        {
+            break;
+        }
+    }
+    snprintf(buf, sizeof(buf), "%d/%d", n, total_lines);
+    strcpy(value, "前%d项占比\n%-");
+    strcat(value, t_width_str);
+    strcat(value, "s %6d %.2f%%\n\n");
+    printf(value, limit, buf, len, (float)n * 100 / total_lines);
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
     FILE *input;
@@ -437,7 +473,7 @@ int main(int argc, char *argv[])
     unsigned int total_bytes_sent = 0;
     unsigned int total_lines = 0;
     char value[8192] = {0};
-    table *http_bad_code_data[1024];
+    table *http_bad_code_data[999] = {NULL};
 
     while (fgets(s, sizeof s, input) != NULL)
     {
@@ -482,7 +518,13 @@ int main(int argc, char *argv[])
         {
             goto error_line;
         }
-        status_code = malloc(strlen(value) + 1);
+        int code_len = strlen(value);
+        if (code_len != 3)
+        {
+            // 状态码必须是三位数字
+            goto error_line;
+        }
+        status_code = malloc(code_len + 1);
         strcpy(status_code, value);
         if (parse_body_bytes_sent(s, &offset, len, value) < 0)
         {
@@ -599,23 +641,30 @@ int main(int argc, char *argv[])
     char t_width_str[16];
     sprintf(t_width_str, "%d", t_width);
 
-    print_stat_long("来访IP统计", remote_addr_data, total_lines, t_width, t_width_str, 0);
+    print_stat_long("来访IP统计", remote_addr_data, total_lines, t_width, t_width_str);
 
-    print_stat_long("用户统计", remote_user_data, total_lines, t_width, t_width_str, 0);
+    print_stat_long("用户统计", remote_user_data, total_lines, t_width, t_width_str);
 
-    print_stat_long("代理IP统计", http_x_forwarded_for_data, total_lines, t_width, t_width_str, '"');
+    print_stat_long("代理IP统计", http_x_forwarded_for_data, total_lines, t_width, t_width_str);
 
-    print_stat_long("HTTP请求统计", request_line_data, total_lines, t_width, t_width_str, 0);
+    print_stat_long("HTTP请求统计", request_line_data, total_lines, t_width, t_width_str);
 
-    print_stat_long("User-Agent统计", http_user_agent_data, total_lines, t_width, t_width_str, 0);
+    print_stat_long("User-Agent统计", http_user_agent_data, total_lines, t_width, t_width_str);
 
-    print_stat_long("HTTP REFERER 统计", http_referer_data, total_lines, t_width, t_width_str, 0);
+    print_stat_long("HTTP REFERER 统计", http_referer_data, total_lines, t_width, t_width_str);
 
-    print_stat_long("请求时间统计", time_local_data, total_lines, t_width, t_width_str, 0);
+    print_stat_long("请求时间统计", time_local_data, total_lines, t_width, t_width_str);
 
-    print_stat_long("HTTP响应状态统计", status_data, total_lines, t_width, t_width_str, 0);
+    print_stat_long("HTTP响应状态统计", status_data, total_lines, t_width, t_width_str);
 
     print_sent_long("HTTP流量占比统计", http_sent_data, total_lines, total_bytes_sent, t_width);
-
+    // 非200状态码
+    for (int i = 0; i < sizeof(http_bad_code_data) / sizeof(*http_bad_code_data); i++)
+    {
+        if (http_bad_code_data[i] != NULL)
+        {
+            print_code_long(i, http_bad_code_data[i], total_lines, t_width, t_width_str);
+        }
+    }
     return 0;
 }

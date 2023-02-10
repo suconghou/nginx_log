@@ -372,14 +372,6 @@ vector<pair<string, strMap>> sort_strmap(statusMap m)
     return vec;
 }
 
-string str_strip(string ss, set<char> chars)
-{
-    ss.erase(remove_if(ss.begin(), ss.end(), [&](char ch)
-                       { return chars.find(ch) != chars.end(); }),
-             ss.end());
-    return ss;
-}
-
 int get_width()
 {
     struct winsize size;
@@ -589,7 +581,7 @@ int process(istream &fh)
     int limit = 100;
     auto t_width_str = to_string(t_width);
 
-    auto print_stat_long = [&](const string name, strMap m, const set<char> chars = {})
+    auto print_stat_long = [&](const string name, strMap m)
     {
         cout << "\n\e[1;34m" << name << "\e[00m" << endl;
         auto data = sort_map(m);
@@ -599,8 +591,7 @@ int process(istream &fh)
         {
             auto u = it.second;
             auto num = it.first;
-            auto stru = chars.size() > 0 ? str_strip(u, chars) : u;
-            printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, stru.c_str(), num, (float)num * 100 / total_lines);
+            printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, (float)num * 100 / total_lines);
             n += num;
             if (++i >= limit)
             {
@@ -611,7 +602,7 @@ int process(istream &fh)
         printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, m.size(), (float)n * 100 / total_lines);
     };
 
-    auto print_sent_long = [&](const string name, strMap m, const set<char> chars = {})
+    auto print_sent_long = [&](const string name, strMap m)
     {
         cout << "\n\e[1;34m" << name << "\e[00m" << endl;
         auto data = sort_map(m);
@@ -623,9 +614,8 @@ int process(istream &fh)
         {
             auto u = it.second;
             auto num = it.first;
-            auto stru = chars.size() > 0 ? str_strip(u, chars) : u;
             byteFormat(num, value);
-            printf(("%-" + max_width_str + ".*s %12s %.2f%%\n").c_str(), max_width, stru.c_str(), value, (float)num * 100 / total_bytes_sent);
+            printf(("%-" + max_width_str + ".*s %12s %.2f%%\n").c_str(), max_width, u.c_str(), value, (float)num * 100 / total_bytes_sent);
             n += num;
             if (++i >= limit)
             {
@@ -640,7 +630,7 @@ int process(istream &fh)
         printf(("前%d项占比\n%-" + max_width_str + "s %12d %.2f%%\n\n").c_str(), limit, value, m.size(), (float)n * 100 / total_bytes_sent);
     };
 
-    auto print_code_long = [&](const string name, strMap m, const set<char> chars = {})
+    auto print_code_long = [&](const string name, strMap m)
     {
         auto data = sort_map(m);
         int count = 0;
@@ -655,8 +645,7 @@ int process(istream &fh)
         {
             auto u = it.second;
             auto num = it.first;
-            auto stru = chars.size() > 0 ? str_strip(u, chars) : u;
-            printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, stru.c_str(), num, (float)num * 100 / total_lines);
+            printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, (float)num * 100 / total_lines);
             n += num;
             if (++i >= limit)
             {
@@ -671,7 +660,7 @@ int process(istream &fh)
 
     print_stat_long("用户统计", remote_user_data);
 
-    print_stat_long("代理IP统计", http_x_forwarded_for_data, {'"'});
+    print_stat_long("代理IP统计", http_x_forwarded_for_data);
 
     print_stat_long("HTTP请求统计", request_line_data);
 
