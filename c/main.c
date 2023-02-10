@@ -336,7 +336,6 @@ int print_stat_long(const char *name, table *map, int total_lines, int t_width, 
     printf("\n\e[1;34m%s\e[00m\n", name);
     unsigned int len = map->counter;
     tableItem **data = sort(map);
-    int found = 0;
     int n = 0;
     int limit = 100;
     char buf[128] = {0};
@@ -350,7 +349,7 @@ int print_stat_long(const char *name, table *map, int total_lines, int t_width, 
         strcat(value, ".*s %6d %.2f%%\n");
         printf(value, t_width, u, num, (float)num * 100 / total_lines);
         n += num;
-        if (++found >= limit)
+        if (i >= limit - 1)
         {
             break;
         }
@@ -360,6 +359,46 @@ int print_stat_long(const char *name, table *map, int total_lines, int t_width, 
     strcat(value, t_width_str);
     strcat(value, "s %6d %.2f%%\n\n");
     printf(value, limit, buf, len, (float)n * 100 / total_lines);
+    return 0;
+}
+
+int print_sent_long(const char *name, table *map, int total_lines, int total_bytes_sent, int t_width)
+{
+    printf("\n\e[1;34m%s\e[00m\n", name);
+    unsigned int len = map->counter;
+    tableItem **data = sort(map);
+    int max_width = t_width - 6;
+    int limit = 100;
+    int n = 0;
+    char buf[128] = {0};
+    char value[1024] = {0};
+    char max_width_str[12];
+    sprintf(max_width_str, "%d", max_width);
+
+    for (int i = 0; i < len; i++)
+    {
+        char *u = data[i]->key;
+        int num = data[i]->value;
+        strcpy(value, "%-");
+        strcat(value, max_width_str);
+        strcat(value, ".*s %12s %.2f%%\n");
+        byteFormat(num, buf);
+        printf(value, max_width, u, buf, (float)num * 100 / total_bytes_sent);
+        n += num;
+        if (i >= limit - 1)
+        {
+            break;
+        }
+    }
+    char b1[128] = {0};
+    char b2[128] = {0};
+    byteFormat(n, b1);
+    byteFormat(total_bytes_sent, b2);
+    snprintf(buf, sizeof(buf), "%s/%s", b1, b2);
+    strcpy(value, "前%d项占比\n%-");
+    strcat(value, max_width_str);
+    strcat(value, "s %12d %.2f%%\n\n");
+    printf(value, limit, buf, len, (float)n * 100 / total_bytes_sent);
     return 0;
 }
 
@@ -398,6 +437,7 @@ int main(int argc, char *argv[])
     unsigned int total_bytes_sent = 0;
     unsigned int total_lines = 0;
     char value[8192] = {0};
+    table *http_bad_code_data[1024];
 
     while (fgets(s, sizeof s, input) != NULL)
     {
@@ -487,12 +527,36 @@ int main(int argc, char *argv[])
         {
             if (incr(http_sent_data, request_line, body_bytes_sent) >= 0)
             {
-                free(request_line);
+                if (strcmp(status_code, "200") != 0)
+                {
+                    unsigned int status_code_int = atoi(status_code);
+                    if (http_bad_code_data[status_code_int] == NULL)
+                    {
+                        http_bad_code_data[status_code_int] = newTable(1024);
+                    }
+                    if (incr(http_bad_code_data[status_code_int], request_line, 1) >= 0)
+                    {
+                        free(request_line);
+                    }
+                }
+                else
+                {
+                    free(request_line);
+                }
             }
         }
         else
         {
             incr(http_sent_data, request_line, body_bytes_sent);
+            if (strcmp(status_code, "200") != 0)
+            {
+                unsigned int status_code_int = atoi(status_code);
+                if (http_bad_code_data[status_code_int] == NULL)
+                {
+                    http_bad_code_data[status_code_int] = newTable(1024);
+                }
+                incr(http_bad_code_data[status_code_int], request_line, 1);
+            }
         }
         if (incr(status_data, status_code, 1) >= 0)
         {
@@ -550,5 +614,8 @@ int main(int argc, char *argv[])
     print_stat_long("请求时间统计", time_local_data, total_lines, t_width, t_width_str, 0);
 
     print_stat_long("HTTP响应状态统计", status_data, total_lines, t_width, t_width_str, 0);
+
+    print_sent_long("HTTP流量占比统计", http_sent_data, total_lines, total_bytes_sent, t_width);
+
     return 0;
 }

@@ -110,7 +110,7 @@ int incr(table *t, char *key, int n)
     }
     tableItem *item = malloc(sizeof(tableItem));
     item->key = key;
-    item->value = 1;
+    item->value = n;
     item->hcode = hc;
     t->dataArr[h] = item;
     t->counter++;
