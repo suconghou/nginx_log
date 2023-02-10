@@ -342,12 +342,17 @@ void byteFormat(unsigned int s, char *out)
     sprintf(out, "%.2f %cB", n, *unit);
 }
 
+template <typename... Params>
+void clear_vector_memory(std::vector<Params...> &vec) { vector<Params...>().swap(vec); }
+
 vector<pair<int, string>> sort_map(strMap m)
 {
-    vector<pair<int, string>> vec;
+    int i = 0;
+    auto vec = vector<pair<int, string>>(m.size());
     for (const auto it : m)
     {
-        vec.push_back(make_pair(it.second, it.first));
+        vec[i] = make_pair(it.second, it.first);
+        i++;
     }
     sort(vec.begin(), vec.end(), greater<>());
     return vec;
@@ -362,10 +367,12 @@ int cmp(pair<string, strMap> a, pair<string, strMap> b)
 // 我们的second无法比较，需要自定义cmp函数
 vector<pair<string, strMap>> sort_strmap(statusMap m)
 {
-    vector<pair<string, strMap>> vec;
+    int i = 0;
+    auto vec = vector<pair<string, strMap>>(m.size());
     for (const auto it : m)
     {
-        vec.push_back(make_pair(it.first, it.second));
+        vec[i] = make_pair(it.first, it.second);
+        i++;
     }
     sort(vec.begin(), vec.end(), cmp);
     return vec;
@@ -598,7 +605,9 @@ int process(istream &fh)
             }
         }
         snprintf(value, sizeof(value), "%d/%d", n, total_lines);
-        printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, m.size(), ((double)n / (double)total_lines) * 100);
+        printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, data.size(), ((double)n / (double)total_lines) * 100);
+        m.clear();
+        clear_vector_memory(data); // 释放vec内存
     };
 
     auto print_sent_long = [&](const string name, strMap m)
@@ -626,16 +635,18 @@ int process(istream &fh)
         byteFormat(n, b1);
         byteFormat(total_bytes_sent, b2);
         snprintf(value, sizeof(value), "%s/%s", b1, b2);
-        printf(("前%d项占比\n%-" + max_width_str + "s %12d %.2f%%\n\n").c_str(), limit, value, m.size(), ((double)n / (double)total_bytes_sent) * 100);
+        printf(("前%d项占比\n%-" + max_width_str + "s %12d %.2f%%\n\n").c_str(), limit, value, data.size(), ((double)n / (double)total_bytes_sent) * 100);
+        m.clear();
+        clear_vector_memory(data); // 释放vec内存
     };
 
     auto print_code_long = [&](const string name, strMap m)
     {
         auto data = sort_map(m);
         int count = 0;
-        for (const auto it : m)
+        for (const auto it : data)
         {
-            count += it.second;
+            count += it.first;
         }
         cout << "\n\e[1;34m状态码" << name << ",共" << count << "次\e[00m" << endl;
         int i = 0;
@@ -652,7 +663,9 @@ int process(istream &fh)
             }
         }
         snprintf(value, sizeof(value), "%d/%d", n, total_lines);
-        printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, m.size(), ((double)n / (double)total_lines) * 100);
+        printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, data.size(), ((double)n / (double)total_lines) * 100);
+        m.clear();
+        clear_vector_memory(data); // 释放vec内存
     };
 
     print_stat_long("来访IP统计", remote_addr_data);
