@@ -20,7 +20,7 @@ typedef struct table
 // fnv1a32
 #define FNV_PRIME_32 16777619
 #define FNV_OFFSET_32 2166136261U
-uint32_t hash(const char *s)
+static inline uint32_t hash(const char *s)
 {
     uint32_t hash = FNV_OFFSET_32, i;
     for (i = 0; i < strlen(s); i++)
@@ -57,7 +57,7 @@ unsigned int forEach(table *t)
 }
 
 // 无需手动调用，会自动检测需要时，自动调用
-void _enlarge(table *t)
+static inline void _enlarge(table *t)
 {
     unsigned int l = t->dataLen;
     tableItem **data = (tableItem **)calloc(l * 2, sizeof(tableItem *));
@@ -152,7 +152,7 @@ tableItem **sort22(table *t)
     return data;
 }
 
-int compare_function(const void *a, const void *b)
+static inline int compare_function(const void *a, const void *b)
 {
     // 注意，这里不是 tableItem *x = (tableItem *)a;
     tableItem *x = *(tableItem **)a;

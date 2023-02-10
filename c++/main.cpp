@@ -324,7 +324,7 @@ Line::Line(char const *line)
     len = strlen(line);
 }
 
-void byteFormat(unsigned int s, char *out)
+static inline void byteFormat(unsigned int s, char *out)
 {
     char const *unit = "KMGTPEZY";
     if (s < 1024)
@@ -358,7 +358,7 @@ vector<pair<int, string>> sort_map(strMap m)
     return vec;
 }
 
-int cmp(pair<string, strMap> a, pair<string, strMap> b)
+static inline int cmp(pair<string, strMap> a, pair<string, strMap> b)
 {
     return a.first < b.first;
 }
