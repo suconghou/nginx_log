@@ -586,21 +586,21 @@ int process(istream &fh)
     int limit = 100;
     auto t_width_str = to_string(t_width);
 
-    auto print_stat_long = [&](const string name, strMap &m)
+    auto print_stat_long = [&](const string &name, strMap &m)
     {
         cout << "\n\e[1;34m" << name << "\e[00m" << endl;
         auto data = sort_map(m);
         int n = 0;
         for (int i = 0; i < m.size(); i++)
         {
-            auto u = data[i].second;
-            auto num = data[i].first;
-            printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, ((double)num / (double)total_lines) * 100);
-            n += num;
             if (i >= limit)
             {
                 break;
             }
+            auto u = data[i].second;
+            auto num = data[i].first;
+            printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, ((double)num / (double)total_lines) * 100);
+            n += num;
         }
         snprintf(value, sizeof(value), "%d/%d", n, total_lines);
         printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, m.size(), ((double)n / (double)total_lines) * 100);
@@ -608,7 +608,7 @@ int process(istream &fh)
         m.clear();
     };
 
-    auto print_sent_long = [&](const string name, strMap &m)
+    auto print_sent_long = [&](const string &name, strMap &m)
     {
         cout << "\n\e[1;34m" << name << "\e[00m" << endl;
         auto data = sort_map(m);
@@ -618,15 +618,15 @@ int process(istream &fh)
         string max_width_str = to_string(max_width);
         for (int i = 0; i < m.size(); i++)
         {
+            if (i >= limit)
+            {
+                break;
+            }
             auto u = data[i].second;
             auto num = data[i].first;
             byteFormat(num, value);
             printf(("%-" + max_width_str + ".*s %12s %.2f%%\n").c_str(), max_width, u.c_str(), value, ((double)num / (double)total_bytes_sent) * 100);
             n += num;
-            if (i >= limit)
-            {
-                break;
-            }
         }
         char b1[128] = {0};
         char b2[128] = {0};
@@ -638,7 +638,7 @@ int process(istream &fh)
         m.clear();
     };
 
-    auto print_code_long = [&](const string name, strMap &m)
+    auto print_code_long = [&](const string &name, strMap &m)
     {
         auto data = sort_map(m);
         int count = 0;
@@ -650,14 +650,14 @@ int process(istream &fh)
         int n = 0;
         for (int i = 0; i < m.size(); i++)
         {
+            if (i >= limit)
+            {
+                break;
+            }
             auto u = data[i].second;
             auto num = data[i].first;
             printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, ((double)num / (double)total_lines) * 100);
             n += num;
-            if (++i >= limit)
-            {
-                break;
-            }
         }
         snprintf(value, sizeof(value), "%d/%d", n, total_lines);
         printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, m.size(), ((double)n / (double)total_lines) * 100);
@@ -689,6 +689,7 @@ int process(istream &fh)
     {
         print_code_long(http_bad_code_data_sort[i].first, http_bad_code_data_sort[i].second);
     }
+    delete[] http_bad_code_data_sort;
     return 0;
 }
 
