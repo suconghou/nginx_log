@@ -12,9 +12,9 @@ typedef struct tableItem
 
 typedef struct table
 {
-    tableItem **dataArr; // 数组类型，每个成员都是 【 tableItem * 】类型
-    int counter;         // 实际存储的成员数量
-    int dataLen;         // 数组的卡槽数量
+    tableItem **dataArr;  // 数组类型，每个成员都是 【 tableItem * 】类型
+    unsigned int counter; // 实际存储的成员数量
+    unsigned int dataLen; // 数组的卡槽数量
 } table;
 
 // fnv1a32
@@ -60,9 +60,10 @@ unsigned int forEach(table *t)
 static inline void _enlarge(table *t)
 {
     unsigned int l = t->dataLen;
+    unsigned int num = t->counter;
     tableItem **data = (tableItem **)calloc(l * 2, sizeof(tableItem *));
     unsigned int maxHash = l * 2 - 1;
-    for (int i = 0; i < l; i++)
+    for (int i = 0; i < l && num > 0; i++)
     {
         if (t->dataArr[i] != NULL)
         {
@@ -73,6 +74,7 @@ static inline void _enlarge(table *t)
                 j = (j + 1) & maxHash;
             }
             data[j] = t->dataArr[i];
+            num--;
         }
     }
     free(t->dataArr);

@@ -317,7 +317,7 @@ static inline void byteFormat(unsigned int s, char *out)
     sprintf(out, "%.2f %cB", n, *unit);
 }
 
-int get_width()
+static unsigned int get_width()
 {
     struct winsize size;
     char fds[3] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
@@ -331,7 +331,7 @@ int get_width()
     return size.ws_col;
 }
 
-int print_stat_long(const char *name, table *map, unsigned int total_lines, int t_width, char *t_width_str)
+int print_stat_long(const char *name, table *map, unsigned int total_lines, unsigned int t_width, char *t_width_str)
 {
     printf("\n\e[1;34m%s\e[00m\n", name);
     unsigned int len = map->counter;
@@ -365,7 +365,7 @@ int print_stat_long(const char *name, table *map, unsigned int total_lines, int 
     return 0;
 }
 
-int print_sent_long(const char *name, table *map, unsigned int total_lines, unsigned long total_bytes_sent, int t_width)
+int print_sent_long(const char *name, table *map, unsigned int total_lines, unsigned long total_bytes_sent, unsigned int t_width)
 {
     printf("\n\e[1;34m%s\e[00m\n", name);
     unsigned int len = map->counter;
@@ -408,7 +408,7 @@ int print_sent_long(const char *name, table *map, unsigned int total_lines, unsi
     return 0;
 }
 
-int print_code_long(int status_code, table *map, unsigned int total_lines, int t_width, char *t_width_str)
+int print_code_long(int status_code, table *map, unsigned int total_lines, unsigned int t_width, char *t_width_str)
 {
     unsigned int total = 0;
     unsigned int len = map->counter;
@@ -470,19 +470,20 @@ int main(int argc, char *argv[])
 
     // 必须是2的n次方，只有这样才能使得，取余简化
     // k % 2^n = k & (2^n - 1)
-    table *remote_addr_data = newTable(4096);
+    table *remote_addr_data = newTable(8192);
     table *remote_user_data = newTable(64);
-    table *time_local_data = newTable(8192);
-    table *request_line_data = newTable(8192);
+    table *time_local_data = newTable(16384);
+    table *request_line_data = newTable(16384);
     table *status_data = newTable(64);
-    table *http_referer_data = newTable(4096);
-    table *http_user_agent_data = newTable(4096);
-    table *http_x_forwarded_for_data = newTable(1024);
-    table *http_sent_data = newTable(64);
+    table *http_referer_data = newTable(8192);
+    table *http_user_agent_data = newTable(8192);
+    table *http_x_forwarded_for_data = newTable(2048);
+    table *http_sent_data = newTable(16384);
+    table *http_bad_code_data[999] = {NULL};
+
     unsigned long total_bytes_sent = 0;
     unsigned int total_lines = 0;
     char value[8192] = {0};
-    table *http_bad_code_data[999] = {NULL};
 
     while (fgets(s, sizeof s, input) != NULL)
     {
@@ -497,7 +498,6 @@ int main(int argc, char *argv[])
         char *http_referer = NULL;
         char *http_user_agent = NULL;
         char *http_x_forwarded_for = NULL;
-        int body_bytes_sent;
 
         if (parse_remote_addr(s, &offset, len, value) < 0)
         {
@@ -533,13 +533,13 @@ int main(int argc, char *argv[])
             // 状态码必须是三位数字
             goto error_line;
         }
-        status_code = malloc(code_len + 1);
+        status_code = malloc(4);
         strcpy(status_code, value);
         if (parse_body_bytes_sent(s, &offset, len, value) < 0)
         {
             goto error_line;
         }
-        body_bytes_sent = atoi(value);
+        int body_bytes_sent = atoi(value);
         if (parse_http_referer(s, &offset, len, value) < 0)
         {
             goto error_line;
@@ -645,8 +645,8 @@ int main(int argc, char *argv[])
     byteFormat(total_bytes_sent, str_sent);
     unsigned int ip_count = remote_addr_data->counter;
     printf("\n共计\e[1;34m%u\e[00m次访问\n发送总流量\e[1;32m%s\e[00m\n独立IP数\e[1;31m%u\e[00m\n", total_lines, str_sent, ip_count);
-    int t_width = get_width() - 16;
-    int limit = 100;
+    unsigned int t_width = get_width() - 16;
+    unsigned int limit = 100;
     char t_width_str[16];
     sprintf(t_width_str, "%d", t_width);
 
