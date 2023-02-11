@@ -12,6 +12,8 @@ using namespace std;
 
 typedef unordered_map<string, int> strMap;
 typedef unordered_map<string, strMap> statusMap;
+typedef pair<int, string> intstr;
+typedef pair<string, strMap> strstrMap;
 
 typedef int (*char_is_match)(unsigned char x, unsigned char y, unsigned char z);
 
@@ -342,40 +344,37 @@ static inline void byteFormat(unsigned int s, char *out)
     sprintf(out, "%.2f %cB", n, *unit);
 }
 
-template <typename... Params>
-void clear_vector_memory(std::vector<Params...> &vec) { vector<Params...>().swap(vec); }
-
-vector<pair<int, string>> sort_map(strMap m)
+intstr *sort_map(strMap &m)
 {
     int i = 0;
-    auto vec = vector<pair<int, string>>(m.size());
-    for (const auto it : m)
+    auto arr = new intstr[m.size()];
+    for (const auto &it : m)
     {
-        vec[i] = make_pair(it.second, it.first);
+        arr[i] = make_pair(it.second, it.first);
         i++;
     }
-    sort(vec.begin(), vec.end(), greater<>());
-    return vec;
+    sort(arr, arr + m.size(), greater<>());
+    return arr;
 }
 
-static inline int cmp(pair<string, strMap> a, pair<string, strMap> b)
+static inline int cmp(strstrMap a, strstrMap b)
 {
     return a.first < b.first;
 }
 
 // pair 默认对first升序，当first相同时对second升序；
 // 我们的second无法比较，需要自定义cmp函数
-vector<pair<string, strMap>> sort_strmap(statusMap m)
+strstrMap *sort_strmap(statusMap &m)
 {
     int i = 0;
-    auto vec = vector<pair<string, strMap>>(m.size());
-    for (const auto it : m)
+    auto arr = new strstrMap[m.size()];
+    for (const auto &it : m)
     {
-        vec[i] = make_pair(it.first, it.second);
+        arr[i] = make_pair(it.first, it.second);
         i++;
     }
-    sort(vec.begin(), vec.end(), cmp);
-    return vec;
+    sort(arr, arr + m.size(), cmp);
+    return arr;
 }
 
 int get_width()
@@ -587,30 +586,29 @@ int process(istream &fh)
     int limit = 100;
     auto t_width_str = to_string(t_width);
 
-    auto print_stat_long = [&](const string name, strMap m)
+    auto print_stat_long = [&](const string name, strMap &m)
     {
         cout << "\n\e[1;34m" << name << "\e[00m" << endl;
         auto data = sort_map(m);
-        int i = 0;
         int n = 0;
-        for (const auto it : data)
+        for (int i = 0; i < m.size(); i++)
         {
-            auto u = it.second;
-            auto num = it.first;
+            auto u = data[i].second;
+            auto num = data[i].first;
             printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, ((double)num / (double)total_lines) * 100);
             n += num;
-            if (++i >= limit)
+            if (i >= limit)
             {
                 break;
             }
         }
         snprintf(value, sizeof(value), "%d/%d", n, total_lines);
-        printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, data.size(), ((double)n / (double)total_lines) * 100);
+        printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, m.size(), ((double)n / (double)total_lines) * 100);
+        delete[] data;
         m.clear();
-        clear_vector_memory(data); // 释放vec内存
     };
 
-    auto print_sent_long = [&](const string name, strMap m)
+    auto print_sent_long = [&](const string name, strMap &m)
     {
         cout << "\n\e[1;34m" << name << "\e[00m" << endl;
         auto data = sort_map(m);
@@ -618,14 +616,14 @@ int process(istream &fh)
         int n = 0;
         int max_width = t_width - 6;
         string max_width_str = to_string(max_width);
-        for (const auto it : data)
+        for (int i = 0; i < m.size(); i++)
         {
-            auto u = it.second;
-            auto num = it.first;
+            auto u = data[i].second;
+            auto num = data[i].first;
             byteFormat(num, value);
             printf(("%-" + max_width_str + ".*s %12s %.2f%%\n").c_str(), max_width, u.c_str(), value, ((double)num / (double)total_bytes_sent) * 100);
             n += num;
-            if (++i >= limit)
+            if (i >= limit)
             {
                 break;
             }
@@ -635,26 +633,25 @@ int process(istream &fh)
         byteFormat(n, b1);
         byteFormat(total_bytes_sent, b2);
         snprintf(value, sizeof(value), "%s/%s", b1, b2);
-        printf(("前%d项占比\n%-" + max_width_str + "s %12d %.2f%%\n\n").c_str(), limit, value, data.size(), ((double)n / (double)total_bytes_sent) * 100);
+        printf(("前%d项占比\n%-" + max_width_str + "s %12d %.2f%%\n\n").c_str(), limit, value, m.size(), ((double)n / (double)total_bytes_sent) * 100);
+        delete[] data;
         m.clear();
-        clear_vector_memory(data); // 释放vec内存
     };
 
-    auto print_code_long = [&](const string name, strMap m)
+    auto print_code_long = [&](const string name, strMap &m)
     {
         auto data = sort_map(m);
         int count = 0;
-        for (const auto it : data)
+        for (int i = 0; i < m.size(); i++)
         {
-            count += it.first;
+            count += data[i].first;
         }
         cout << "\n\e[1;34m状态码" << name << ",共" << count << "次\e[00m" << endl;
-        int i = 0;
         int n = 0;
-        for (const auto it : data)
+        for (int i = 0; i < m.size(); i++)
         {
-            auto u = it.second;
-            auto num = it.first;
+            auto u = data[i].second;
+            auto num = data[i].first;
             printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, ((double)num / (double)total_lines) * 100);
             n += num;
             if (++i >= limit)
@@ -663,9 +660,9 @@ int process(istream &fh)
             }
         }
         snprintf(value, sizeof(value), "%d/%d", n, total_lines);
-        printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, data.size(), ((double)n / (double)total_lines) * 100);
+        printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, m.size(), ((double)n / (double)total_lines) * 100);
+        delete[] data;
         m.clear();
-        clear_vector_memory(data); // 释放vec内存
     };
 
     print_stat_long("来访IP统计", remote_addr_data);
@@ -688,9 +685,9 @@ int process(istream &fh)
 
     // 非200状态码
     auto http_bad_code_data_sort = sort_strmap(http_bad_code_data);
-    for (const auto it : http_bad_code_data_sort)
+    for (int i = 0; i < http_bad_code_data.size(); i++)
     {
-        print_code_long(it.first, it.second);
+        print_code_long(http_bad_code_data_sort[i].first, http_bad_code_data_sort[i].second);
     }
     return 0;
 }
