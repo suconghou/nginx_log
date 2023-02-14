@@ -370,99 +370,104 @@ proc process(filename:File|string)=
 
 
 
-proc test1(line:string)= 
-    var l = Line(str :line)
-    let remote_addr = l.parse_remote_addr()
-    # echo "remote_addr:["&remote_addr&"]"
-    # echo l.str
-    let remote_user = l.parse_remote_user()
-    # echo "remote_user:["&remote_user&"]"
-    # echo l.str
-    let time_local = l.parse_time_local()
-    # echo "time_local:["&time_local&"]"
-    # echo l.str
-    let request_line = l.parse_request_line()
-    # echo request_line
-    # echo "request_line:["&request_line&"]"
-    # echo l.str
-    let status_code = l.parse_status_code()
-    # echo "status_code:["&status_code&"]"
-    # echo l.str
 
-    let body_bytes_sent = l.parse_body_bytes_sent()
-    # echo body_bytes_sent
-    # echo "body_bytes_sent:["&body_bytes_sent&"]"
-    # echo l.str
-
-    let http_referer = l.parse_http_referer()
-    # echo "http_referer:["&http_referer&"]"
-    # echo l.str
-
-    let http_user_agent = l.parse_http_user_agent()
-    # echo http_user_agent
-    # echo "http_user_agent:["&http_user_agent&"]"
-    # echo l.str
-
-    let http_x_forwarded_for = l.parse_http_x_forwarded_for()
-    # echo "http_x_forwarded_for:["&http_x_forwarded_for&"]"
-    # echo l.str
-
-    
-    # let host = l.parse_host()
-    # echo "host:["&host&"]"
-    # echo l.str
-
-    # let request_length = l.parse_request_length()
-    # echo request_length
-    # echo "request_length:["&request_length&"]"
-    # echo l.str
-
-    # let bytes_sent = l.parse_bytes_sent()
-    # echo "bytes_sent:["&bytes_sent&"]"
-    # echo l.str
-
-    # let upstream_addr = l.parse_upstream_addr()
-    # echo "upstream_addr:["&upstream_addr&"]"
-    # echo l.str
-
-    # let upstream_status = l.parse_upstream_status()
-    # echo "upstream_status:["&upstream_status&"]"
-    # echo l.str
-
-    # let request_time = l.parse_request_time()
-    # echo "request_time:["&request_time&"]"
-    # echo l.str
-
-    
-    # let upstream_response_time = l.parse_upstream_response_time()
-
-    # echo "["&upstream_response_time&"]"
-    # echo l.str
+try:
+    if paramCount()>0:
+        process(paramStr(1))
+    else:
+        process(stdin)
+except:
+    echo getCurrentExceptionMsg()
+    quit(1)
 
 
-    
-    # let upstream_connect_time = l.parse_upstream_connect_time()
-    # echo "[upstream_connect_time:"&upstream_connect_time&"]"
-    # echo l.str
 
-    
-    # let upstream_header_time = l.parse_upstream_header_time()
-    # echo "[upstream_header_time:"&upstream_header_time&"]"
-    # echo "["&l.str&"]"
+runnableExamples:
 
-# discard columns();
-    
-if paramCount()>0:
-    process(paramStr(1))
-else:
-    process(stdin)
+    proc test1(line:string) =
+        var l = Line(str :line)
+        let remote_addr = l.parse_remote_addr()
+        # echo "remote_addr:["&remote_addr&"]"
+        # echo l.str
+        let remote_user = l.parse_remote_user()
+        # echo "remote_user:["&remote_user&"]"
+        # echo l.str
+        let time_local = l.parse_time_local()
+        # echo "time_local:["&time_local&"]"
+        # echo l.str
+        let request_line = l.parse_request_line()
+        # echo request_line
+        # echo "request_line:["&request_line&"]"
+        # echo l.str
+        let status_code = l.parse_status_code()
+        # echo "status_code:["&status_code&"]"
+        # echo l.str
+
+        let body_bytes_sent = l.parse_body_bytes_sent()
+        # echo body_bytes_sent
+        # echo "body_bytes_sent:["&body_bytes_sent&"]"
+        # echo l.str
+
+        let http_referer = l.parse_http_referer()
+        # echo "http_referer:["&http_referer&"]"
+        # echo l.str
+
+        let http_user_agent = l.parse_http_user_agent()
+        # echo http_user_agent
+        # echo "http_user_agent:["&http_user_agent&"]"
+        # echo l.str
+
+        let http_x_forwarded_for = l.parse_http_x_forwarded_for()
+        # echo "http_x_forwarded_for:["&http_x_forwarded_for&"]"
+        # echo l.str
 
 
-# for line in stdin.lines:
-#     try:
-#         test1(line)
-#     except:
-#         raise
-#         stderr.writeLine(getCurrentExceptionMsg())
-#         stderr.writeLine(line)
+        # let host = l.parse_host()
+        # echo "host:["&host&"]"
+        # echo l.str
+
+        # let request_length = l.parse_request_length()
+        # echo request_length
+        # echo "request_length:["&request_length&"]"
+        # echo l.str
+
+        # let bytes_sent = l.parse_bytes_sent()
+        # echo "bytes_sent:["&bytes_sent&"]"
+        # echo l.str
+
+        # let upstream_addr = l.parse_upstream_addr()
+        # echo "upstream_addr:["&upstream_addr&"]"
+        # echo l.str
+
+        # let upstream_status = l.parse_upstream_status()
+        # echo "upstream_status:["&upstream_status&"]"
+        # echo l.str
+
+        # let request_time = l.parse_request_time()
+        # echo "request_time:["&request_time&"]"
+        # echo l.str
+
+
+        # let upstream_response_time = l.parse_upstream_response_time()
+        # echo "["&upstream_response_time&"]"
+        # echo l.str
+
+
+
+        # let upstream_connect_time = l.parse_upstream_connect_time()
+        # echo "[upstream_connect_time:"&upstream_connect_time&"]"
+        # echo l.str
+
+
+        # let upstream_header_time = l.parse_upstream_header_time()
+        # echo "[upstream_header_time:"&upstream_header_time&"]"
+        # echo l.str
+
+    for line in stdin.lines:
+        try:
+            test1(line)
+        except:
+            raise
+            stderr.writeLine(getCurrentExceptionMsg())
+            stderr.writeLine(line)
 

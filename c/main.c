@@ -462,7 +462,7 @@ int main(int argc, char *argv[])
         if (input == NULL)
         {
             perror(argv[1]);
-            return -1;
+            return 1;
         }
     }
 
