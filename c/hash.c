@@ -20,9 +20,9 @@ typedef struct table
 // fnv1a32
 #define FNV_PRIME_32 16777619
 #define FNV_OFFSET_32 2166136261U
-static inline uint32_t hash(const char *s)
+static inline unsigned int hash(const char *s)
 {
-    uint32_t hash = FNV_OFFSET_32, i;
+    unsigned int hash = FNV_OFFSET_32, i;
     for (i = 0; i < strlen(s); i++)
     {
         hash = hash ^ (s[i]);       // xor next byte into the bottom of the hash
