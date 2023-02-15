@@ -613,7 +613,6 @@ int process(istream &fh)
     {
         cout << "\n\e[1;34m" << name << "\e[00m" << endl;
         auto data = sort_map(m);
-        int i = 0;
         int n = 0;
         int max_width = t_width - 6;
         string max_width_str = to_string(max_width);
@@ -696,9 +695,6 @@ int process(istream &fh)
 
 int main(int argc, char *argv[])
 {
-    istream *in;
-    ifstream ifn;
-
     if (argc < 2)
     {
         return process(cin);

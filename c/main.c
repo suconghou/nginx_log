@@ -646,7 +646,6 @@ int main(int argc, char *argv[])
     unsigned int ip_count = remote_addr_data->counter;
     printf("\n共计\e[1;34m%u\e[00m次访问\n发送总流量\e[1;32m%s\e[00m\n独立IP数\e[1;31m%u\e[00m\n", total_lines, str_sent, ip_count);
     unsigned int t_width = get_width() - 16;
-    unsigned int limit = 100;
     char t_width_str[16];
     sprintf(t_width_str, "%d", t_width);
 
