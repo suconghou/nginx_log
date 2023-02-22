@@ -13,8 +13,7 @@ const square_left = {' ', '['}
 const square_right = {' ', ']'}
 
 # 根据条件解析，并去除前置后置x字符
-proc parse_item_trimx(this: var Line, left: set[char], right: set[char],
-        cond: proc, strip_left: set[char] = {}): string =
+proc parse_item_trimx(this: var Line, left: set[char], right: set[char], cond: proc, strip_left: set[char] = {}): string =
     let strlen = this.str.len;
     var i = this.index;
     var item_value: string;
@@ -81,16 +80,13 @@ proc parse_item_trimx(this: var Line, left: set[char], right: set[char],
 proc digital(x: char, y: char, z: char): bool = x >= '\48' and x <= '\57'
 
 # 包含数字和.号
-proc digital_dot(x: char, y: char, z: char): bool = (x >= '\48' and x <=
-        '\57') or x == '\46'
+proc digital_dot(x: char, y: char, z: char): bool = (x >= '\48' and x <= '\57') or x == '\46'
 
 # 包含数字和.号或-号
-proc digital_dot_minus(x: char, y: char, z: char): bool = (x >= '\48' and x <=
-        '\57') or x == '\46' or x == '\45'
+proc digital_dot_minus(x: char, y: char, z: char): bool = (x >= '\48' and x <= '\57') or x == '\46' or x == '\45'
 
 # 匹配到],并且下一个是空格
-proc square_right_space(x: char, y: char, z: char): bool = not (x == '\93' and
-        y == '\32')
+proc square_right_space(x: char, y: char, z: char): bool = not (x == '\93' and y == '\32')
 
 # 非空格
 proc not_space(x: char, y: char, z: char): bool = x != '\32'
@@ -106,12 +102,10 @@ proc quote_string_end(): proc =
         return true
 
 # 当前字符是空格，上个字符是字母,不包含空格
-proc string_end(x: char, y: char, z: char): bool = not (x == '\32' and ( (z >=
-        '\65' and z <= '\90') or (z >= '\97' and z <= '\122')))
+proc string_end(x: char, y: char, z: char): bool = not (x == '\32' and ( (z >= '\65' and z <= '\90') or (z >= '\97' and z <= '\122')))
 
 # 当前是空格，上一个是-或者数字
-proc digital_or_none_end(x: char, y: char, z: char): bool = not (x == '\32' and
-        ( (z >= '\48' and z <= '\57') or z == '\45'))
+proc digital_or_none_end(x: char, y: char, z: char): bool = not (x == '\32' and ( (z >= '\48' and z <= '\57') or z == '\45'))
 
 # 包含数字和.号
 proc parse_remote_addr(this: var Line): string =
