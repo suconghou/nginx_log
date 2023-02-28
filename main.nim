@@ -248,8 +248,7 @@ proc process(filename: File|string) =
         http_sent_data[request_line] = n+bytes_sent_num.int
 
         if status_code != "200":
-            var info = http_bad_code_data.getOrDefault(status_code,
-                    newOrderedTable[string, int]())
+            var info = http_bad_code_data.getOrDefault(status_code, newOrderedTable[string, int]())
             n = info.getOrDefault(request_line, 0)
             info[request_line] = n+1
             http_bad_code_data[status_code] = info
