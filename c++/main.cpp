@@ -388,7 +388,7 @@ int get_width()
 {
     struct winsize size;
     char fds[3] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
-    for (int fd = 0; fd < sizeof(fds) / sizeof(fds[0]); fd++)
+    for (unsigned int fd = 0; fd < sizeof(fds) / sizeof(fds[0]); fd++)
     {
         if (ioctl(fd, TIOCGWINSZ, &size) != -1)
         {
@@ -590,7 +590,7 @@ int process(istream &fh)
     unsigned int ip_count = remote_addr_data.size();
     printf("\n共计\e[1;34m%u\e[00m次访问\n发送总流量\e[1;32m%s\e[00m\n独立IP数\e[1;31m%u\e[00m\n", total_lines, value, ip_count);
     int t_width = get_width() - 16;
-    int limit = 100;
+    unsigned int limit = 100;
     auto t_width_str = to_string(t_width);
 
     auto print_stat_long = [&](const string &name, strMap &m)
@@ -598,7 +598,7 @@ int process(istream &fh)
         cout << "\n\e[1;34m" << name << "\e[00m" << endl;
         auto data = sort_map(m);
         int n = 0;
-        for (int i = 0; i < m.size(); i++)
+        for (unsigned int i = 0; i < m.size(); i++)
         {
             if (i >= limit)
             {
@@ -622,7 +622,7 @@ int process(istream &fh)
         int n = 0;
         int max_width = t_width - 6;
         string max_width_str = to_string(max_width);
-        for (int i = 0; i < m.size(); i++)
+        for (unsigned int i = 0; i < m.size(); i++)
         {
             if (i >= limit)
             {
@@ -648,13 +648,13 @@ int process(istream &fh)
     {
         auto data = sort_map(m);
         int count = 0;
-        for (int i = 0; i < m.size(); i++)
+        for (unsigned int i = 0; i < m.size(); i++)
         {
             count += data[i].first;
         }
         cout << "\n\e[1;34m状态码" << name << ",共" << count << "次\e[00m" << endl;
         int n = 0;
-        for (int i = 0; i < m.size(); i++)
+        for (unsigned int i = 0; i < m.size(); i++)
         {
             if (i >= limit)
             {
@@ -691,7 +691,7 @@ int process(istream &fh)
 
     // 非200状态码
     auto http_bad_code_data_sort = sort_strmap(http_bad_code_data);
-    for (int i = 0; i < http_bad_code_data.size(); i++)
+    for (unsigned int i = 0; i < http_bad_code_data.size(); i++)
     {
         print_code_long(http_bad_code_data_sort[i].first, http_bad_code_data_sort[i].second);
     }
