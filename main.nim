@@ -260,7 +260,7 @@ proc process(filename: File|string) =
         try:
             parse_line(line);
             total_lines+=1;
-        except:
+        except CatchableError:
             stderr.writeLine(line)
     # 分析完毕后，排序然后，打印统计数据
     if total_lines < 1:
@@ -380,7 +380,7 @@ try:
         process(paramStr(1))
     else:
         process(stdin)
-except:
+except CatchableError:
     echo getCurrentExceptionMsg()
     quit(1)
 
