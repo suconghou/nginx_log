@@ -70,7 +70,7 @@ proc parse_item_trimx(this: var Line, left: set[char], right: set[char], cond: p
                 elif i == strlen:
                     i+=1
             this.index = i-1
-            break
+            return item_value
     # 防止前置字符去除时，直接continue完所有
     if item_value.len < 1:
         raise newException(ValueError, "匹配失败:"&this.str)
