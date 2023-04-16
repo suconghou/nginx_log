@@ -12,6 +12,15 @@ const quotation = {'"'}
 const square_left = {' ', '['}
 const square_right = {' ', ']'}
 
+
+# 类似内置substr的更快实现
+func substr(s: string, first: int, last: int): string =
+    let l = last-first+1
+    if l < 1:
+        return ""
+    result = newString(l)
+    copyMem(result[0].addr, cast[cstring](cast[uint](s.cstring)+first.uint), l)
+
 # 根据条件解析，并去除前置后置x字符
 proc parse_item_trimx(this: var Line, left: set[char], right: set[char], cond: proc, strip_left: set[char] = {}): string =
     let strlen = this.str.len;
