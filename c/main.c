@@ -126,8 +126,8 @@ int parse_item_trim_space(const char *s, int *offset, int len, char *item_value,
         }
         if (gotvalue < 0)
         {
-            unsigned char y = i < len ? s[i] : 0;
-            unsigned char z = i >= 2 ? s[i - 2] : 0;
+            const unsigned char y = i < len ? s[i] : 0;
+            const unsigned char z = i >= 2 ? s[i - 2] : 0;
             if (cond(x, y, z))
             {
                 found_end = i - 1;
@@ -160,7 +160,7 @@ int parse_item_trim_space(const char *s, int *offset, int len, char *item_value,
                     }
                 }
             }
-            int v_len = found_end - found_start + 1;
+            const int v_len = found_end - found_start + 1;
             strncpy(item_value, s + found_start, v_len);
             item_value[v_len] = '\0';
             gotvalue = 1;
@@ -340,10 +340,10 @@ static unsigned int get_width()
 int print_stat_long(const char *name, table *map, unsigned int total_lines, unsigned int t_width, char *t_width_str)
 {
     printf("\n\e[1;34m%s\e[00m\n", name);
-    unsigned int len = map->counter;
+    const unsigned int len = map->counter;
     tableItem **data = sort(map);
     unsigned long n = 0;
-    int limit = 100;
+    const int limit = 100;
     char buf[128] = {0};
     char value[1024] = {0};
     for (int i = 0; i < len; i++)
@@ -353,8 +353,8 @@ int print_stat_long(const char *name, table *map, unsigned int total_lines, unsi
             free(data[i]);
             continue;
         }
-        char *u = data[i]->key;
-        unsigned int num = data[i]->value;
+        const char *u = data[i]->key;
+        const unsigned int num = data[i]->value;
         strcpy(value, "%-");
         strcat(value, t_width_str);
         strcat(value, ".*s %6d %.2f%%\n");
@@ -374,10 +374,10 @@ int print_stat_long(const char *name, table *map, unsigned int total_lines, unsi
 int print_sent_long(const char *name, table *map, unsigned int total_lines, unsigned long total_bytes_sent, unsigned int t_width)
 {
     printf("\n\e[1;34m%s\e[00m\n", name);
-    unsigned int len = map->counter;
+    const unsigned int len = map->counter;
     tableItem **data = sort(map);
-    int max_width = t_width - 6;
-    int limit = 100;
+    const int max_width = t_width - 6;
+    const int limit = 100;
     unsigned long n = 0;
     char buf[128] = {0};
     char value[1024] = {0};
@@ -391,8 +391,8 @@ int print_sent_long(const char *name, table *map, unsigned int total_lines, unsi
             free(data[i]);
             continue;
         }
-        char *u = data[i]->key;
-        unsigned int num = data[i]->value;
+        const char *u = data[i]->key;
+        const unsigned int num = data[i]->value;
         strcpy(value, "%-");
         strcat(value, max_width_str);
         strcat(value, ".*s %12s %.2f%%\n");
@@ -417,7 +417,7 @@ int print_sent_long(const char *name, table *map, unsigned int total_lines, unsi
 int print_code_long(int status_code, table *map, unsigned int total_lines, unsigned int t_width, char *t_width_str)
 {
     unsigned int total = 0;
-    unsigned int len = map->counter;
+    const unsigned int len = map->counter;
     tableItem **data = sort(map);
     for (int i = 0; i < len; i++)
     {
@@ -425,7 +425,7 @@ int print_code_long(int status_code, table *map, unsigned int total_lines, unsig
     }
     printf("\n\e[1;34m状态码%d,共%d次\e[00m\n", status_code, total);
     unsigned long n = 0;
-    int limit = 100;
+    const int limit = 100;
     char buf[128] = {0};
     char value[1024] = {0};
     for (int i = 0; i < len; i++)
@@ -435,8 +435,8 @@ int print_code_long(int status_code, table *map, unsigned int total_lines, unsig
             free(data[i]);
             continue;
         }
-        char *u = data[i]->key;
-        unsigned int num = data[i]->value;
+        const char *u = data[i]->key;
+        const unsigned int num = data[i]->value;
         strcpy(value, "%-");
         strcat(value, t_width_str);
         strcat(value, ".*s %6d %.2f%%\n");

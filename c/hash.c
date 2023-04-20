@@ -166,7 +166,7 @@ static inline int compare_function(const void *a, const void *b)
 // 排序过后不应该在新增数据到table了
 tableItem **sort(table *t)
 {
-    int num = t->counter;
+    const int num = t->counter;
     tableItem **data = (tableItem **)calloc(num, sizeof(tableItem *));
     int index = 0;
     for (int i = 0; i < t->dataLen && index < num; i++)

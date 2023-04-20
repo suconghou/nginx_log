@@ -130,7 +130,7 @@ private:
         int i = index;
         while (i < len)
         {
-            unsigned char x = str[i];
+            const unsigned char x = str[i];
             i++;
             if ((x == ' ' || (strip_square && x == '[')) && pad)
             {
@@ -143,8 +143,8 @@ private:
             }
             if (gotvalue < 0)
             {
-                unsigned char y = i < len ? str[i] : 0;
-                unsigned char z = i >= 2 ? str[i - 2] : 0;
+                const unsigned char y = i < len ? str[i] : 0;
+                const unsigned char z = i >= 2 ? str[i - 2] : 0;
                 if (cond(x, y, z))
                 {
                     found_end = i - 1;
@@ -177,7 +177,7 @@ private:
                         }
                     }
                 }
-                int v_len = found_end - found_start + 1;
+                const int v_len = found_end - found_start + 1;
                 strncpy(item_value, str + found_start, v_len);
                 item_value[v_len] = '\0';
                 gotvalue = 1;
@@ -587,16 +587,16 @@ int process(istream &fh)
         }
     }
     byteFormat(total_bytes_sent, value);
-    unsigned int ip_count = remote_addr_data.size();
+    const unsigned int ip_count = remote_addr_data.size();
     printf("\n共计\e[1;34m%u\e[00m次访问\n发送总流量\e[1;32m%s\e[00m\n独立IP数\e[1;31m%u\e[00m\n", total_lines, value, ip_count);
-    int t_width = get_width() - 16;
-    unsigned int limit = 100;
-    auto t_width_str = to_string(t_width);
+    const int t_width = get_width() - 16;
+    const unsigned int limit = 100;
+    const auto t_width_str = to_string(t_width);
 
     auto print_stat_long = [&](const string &name, strMap &m)
     {
         cout << "\n\e[1;34m" << name << "\e[00m" << endl;
-        auto data = sort_map(m);
+        const auto data = sort_map(m);
         int n = 0;
         for (unsigned int i = 0; i < m.size(); i++)
         {
@@ -604,8 +604,8 @@ int process(istream &fh)
             {
                 break;
             }
-            auto u = data[i].second;
-            auto num = data[i].first;
+            const auto u = data[i].second;
+            const auto num = data[i].first;
             printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, ((double)num / (double)total_lines) * 100);
             n += num;
         }
@@ -618,18 +618,18 @@ int process(istream &fh)
     auto print_sent_long = [&](const string &name, strMap &m)
     {
         cout << "\n\e[1;34m" << name << "\e[00m" << endl;
-        auto data = sort_map(m);
+        const auto data = sort_map(m);
         int n = 0;
-        int max_width = t_width - 6;
-        string max_width_str = to_string(max_width);
+        const int max_width = t_width - 6;
+        const string max_width_str = to_string(max_width);
         for (unsigned int i = 0; i < m.size(); i++)
         {
             if (i >= limit)
             {
                 break;
             }
-            auto u = data[i].second;
-            auto num = data[i].first;
+            const auto u = data[i].second;
+            const auto num = data[i].first;
             byteFormat(num, value);
             printf(("%-" + max_width_str + ".*s %12s %.2f%%\n").c_str(), max_width, u.c_str(), value, ((double)num / (double)total_bytes_sent) * 100);
             n += num;
@@ -646,7 +646,7 @@ int process(istream &fh)
 
     auto print_code_long = [&](const string &name, strMap &m)
     {
-        auto data = sort_map(m);
+        const auto data = sort_map(m);
         int count = 0;
         for (unsigned int i = 0; i < m.size(); i++)
         {
@@ -660,8 +660,8 @@ int process(istream &fh)
             {
                 break;
             }
-            auto u = data[i].second;
-            auto num = data[i].first;
+            const auto u = data[i].second;
+            const auto num = data[i].first;
             printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, ((double)num / (double)total_lines) * 100);
             n += num;
         }
@@ -690,7 +690,7 @@ int process(istream &fh)
     print_sent_long("HTTP流量占比统计", http_sent_data);
 
     // 非200状态码
-    auto http_bad_code_data_sort = sort_strmap(http_bad_code_data);
+    const auto http_bad_code_data_sort = sort_strmap(http_bad_code_data);
     for (unsigned int i = 0; i < http_bad_code_data.size(); i++)
     {
         print_code_long(http_bad_code_data_sort[i].first, http_bad_code_data_sort[i].second);
