@@ -4,6 +4,7 @@
 #include <sstream>
 #include <iostream>
 #include <array>
+#include <algorithm>
 #include <vector>
 #include <unordered_map>
 #include <sys/ioctl.h> // ioctl() and TIOCGWINSZ
