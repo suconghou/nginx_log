@@ -589,6 +589,10 @@ int process(istream &fh)
     byteFormat(total_bytes_sent, value);
     const unsigned int ip_count = remote_addr_data.size();
     printf("\n共计\e[1;34m%u\e[00m次访问\n发送总流量\e[1;32m%s\e[00m\n独立IP数\e[1;31m%u\e[00m\n", total_lines, value, ip_count);
+    if (total_lines < 1)
+    {
+        return 0;
+    }
     const int t_width = get_width() - 16;
     const unsigned int limit = 100;
     const auto t_width_str = to_string(t_width);

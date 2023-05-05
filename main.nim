@@ -68,7 +68,8 @@ proc parse_item_trimx(this: var Line, left: set[char], right: set[char], cond: p
                 # 如果最后一个字符符合，则found=len-1,此时剩余应为空
                 # 如果最后一个字符不符合，判断是否是后置字符，如果是则也为空
                 if found_end == strlen-1 or x in right:
-                    this.index = strlen-1
+                    # 字符串已完全遍历
+                    this.index = strlen
                 else:
                     this.index = found_end+1
         else:
@@ -272,13 +273,12 @@ proc process(filename: File|string) =
         except CatchableError:
             stderr.writeLine(line)
     # 分析完毕后，排序然后，打印统计数据
-    if total_lines < 1:
-        return
 
     let str_sent = formatSize(total_bytes_sent.int64)
     let ip_count = remote_addr_data.len
     echo &"\n共计\e[1;34m{total_lines}\e[00m次访问\n发送总流量\e[1;32m{str_sent}\e[00m\n独立IP数\e[1;31m{ip_count}\e[00m"
-
+    if total_lines < 1:
+        return
     let limit = 100;
     let t_width = terminalWidth() - 16
     let lines = total_lines.float
