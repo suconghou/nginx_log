@@ -240,31 +240,17 @@ proc process(filename: File|string) =
 
         total_bytes_sent+=bytes_sent_num
 
-
-        var n = remote_addr_data.getOrDefault(remote_addr, 0)
-        remote_addr_data[remote_addr] = n+1
-        n = remote_user_data.getOrDefault(remote_user, 0)
-        remote_user_data[remote_user] = n+1
-        n = time_local_data.getOrDefault(time_local, 0)
-        time_local_data[time_local] = n+1
-        n = request_line_data.getOrDefault(request_line, 0)
-        request_line_data[request_line] = n+1
-        n = status_data.getOrDefault(status_code, 0)
-        status_data[status_code] = n+1
-        n = http_referer_data.getOrDefault(http_referer, 0)
-        http_referer_data[http_referer] = n+1
-        n = http_user_agent_data.getOrDefault(http_user_agent, 0)
-        http_user_agent_data[http_user_agent] = n+1
-        n = http_x_forwarded_for_data.getOrDefault(http_x_forwarded_for, 0)
-        http_x_forwarded_for_data[http_x_forwarded_for] = n+1
-        n = http_sent_data.getOrDefault(request_line, 0)
-        http_sent_data[request_line] = n+bytes_sent_num.int
-
+        remote_addr_data.mgetOrPut(remote_addr, 0) += 1
+        remote_user_data.mgetOrPut(remote_user, 0) += 1
+        time_local_data.mgetOrPut(time_local, 0) += 1
+        request_line_data.mgetOrPut(request_line, 0) += 1
+        status_data.mgetOrPut(status_code, 0) += 1
+        http_referer_data.mgetOrPut(http_referer, 0) += 1
+        http_user_agent_data.mgetOrPut(http_user_agent, 0) += 1
+        http_x_forwarded_for_data.mgetOrPut(http_x_forwarded_for, 0) += 1
+        http_sent_data.mgetOrPut(request_line, 0) += bytes_sent_num.int
         if status_code != "200":
-            var info = http_bad_code_data.getOrDefault(status_code, newOrderedTable[string, int]())
-            n = info.getOrDefault(request_line, 0)
-            info[request_line] = n+1
-            http_bad_code_data[status_code] = info
+            http_bad_code_data.mgetOrPut(status_code, newOrderedTable[string, int]()).mgetOrPut(request_line, 0)+=1
 
     for line in filename.lines:
         try:

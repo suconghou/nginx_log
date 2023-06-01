@@ -484,107 +484,18 @@ int process(istream &fh)
         total_lines++;
         total_bytes_sent += body_bytes_sent;
 
-        if (remote_addr_data.find(remote_addr) != remote_addr_data.end())
-        {
-            ++remote_addr_data[remote_addr];
-        }
-        else
-        {
-            remote_addr_data[remote_addr] = 1;
-        }
-
-        if (remote_user_data.find(remote_user) != remote_user_data.end())
-        {
-            ++remote_user_data[remote_user];
-        }
-        else
-        {
-            remote_user_data[remote_user] = 1;
-        }
-
-        if (time_local_data.find(time_local) != time_local_data.end())
-        {
-            ++time_local_data[time_local];
-        }
-        else
-        {
-            time_local_data[time_local] = 1;
-        }
-
-        if (request_line_data.find(request_line) != request_line_data.end())
-        {
-            ++request_line_data[request_line];
-        }
-        else
-        {
-            request_line_data[request_line] = 1;
-        }
-
-        if (status_data.find(status_code) != status_data.end())
-        {
-            ++status_data[status_code];
-        }
-        else
-        {
-            status_data[status_code] = 1;
-        }
-
-        if (http_referer_data.find(http_referer) != http_referer_data.end())
-        {
-            ++http_referer_data[http_referer];
-        }
-        else
-        {
-            http_referer_data[http_referer] = 1;
-        }
-
-        if (http_user_agent_data.find(http_user_agent) != http_user_agent_data.end())
-        {
-            ++http_user_agent_data[http_user_agent];
-        }
-        else
-        {
-            http_user_agent_data[http_user_agent] = 1;
-        }
-
-        if (http_x_forwarded_for_data.find(http_x_forwarded_for) != http_x_forwarded_for_data.end())
-        {
-            ++http_x_forwarded_for_data[http_x_forwarded_for];
-        }
-        else
-        {
-            http_x_forwarded_for_data[http_x_forwarded_for] = 1;
-        }
-
-        if (http_sent_data.find(request_line) != http_sent_data.end())
-        {
-            http_sent_data[request_line] += body_bytes_sent;
-        }
-        else
-        {
-            http_sent_data[request_line] = body_bytes_sent;
-        }
-
+        remote_addr_data[remote_addr] += 1;
+        remote_user_data[remote_user] += 1;
+        time_local_data[time_local] += 1;
+        request_line_data[request_line] += 1;
+        status_data[status_code] += 1;
+        http_referer_data[http_referer] += 1;
+        http_user_agent_data[http_user_agent] += 1;
+        http_x_forwarded_for_data[http_x_forwarded_for] += 1;
+        http_sent_data[request_line] += body_bytes_sent;
         if (status_code != "200")
         {
-            if (http_bad_code_data.find(status_code) != http_bad_code_data.end())
-            {
-                auto &x = http_bad_code_data[status_code];
-                if (x.find(request_line) != x.end())
-                {
-                    x[request_line] += 1;
-                }
-                else
-                {
-                    x[request_line] = 1;
-                }
-            }
-            else
-            {
-                strMap badreq;
-                badreq[request_line] = 1;
-                http_bad_code_data[status_code] = badreq;
-            }
+            http_bad_code_data[status_code][request_line] += 1;
         }
     }
     byteFormat(total_bytes_sent, value);
