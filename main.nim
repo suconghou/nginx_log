@@ -274,7 +274,7 @@ proc process(filename: File|string) =
             stderr.writeLine(line)
     # 分析完毕后，排序然后，打印统计数据
 
-    let str_sent = formatSize(total_bytes_sent.int64)
+    let str_sent = formatSize(total_bytes_sent.int64, prefix = bpColloquial, includeSpace = true)
     let ip_count = remote_addr_data.len
     echo &"\n共计\e[1;34m{total_lines}\e[00m次访问\n发送总流量\e[1;32m{str_sent}\e[00m\n独立IP数\e[1;31m{ip_count}\e[00m"
     if total_lines < 1:
@@ -315,12 +315,12 @@ proc process(filename: File|string) =
                 stru = stru.alignLeft(max_width)
             else:
                 stru = stru.substr(0, max_width-1)
-            echo fmt"{stru} {formatSize(num):>12.12} {num.float*100/total_bytes:.2f}%"
+            echo fmt"{stru} {formatSize(num,prefix = bpColloquial, includeSpace = true):>12.12} {num.float*100/total_bytes:.2f}%"
             i+=1
             n+=num
             if i >= limit:
                 break
-        let part1 = (fmt"{formatSize(n)}/{formatSize(total_bytes_sent.int64)}").alignLeft(max_width)
+        let part1 = (fmt"{formatSize(n,prefix = bpColloquial, includeSpace = true)}/{formatSize(total_bytes_sent.int64,prefix = bpColloquial, includeSpace = true)}").alignLeft(max_width)
         echo &"前{limit}项占比\n{part1} {data.len:12.12} {n.float*100/total_bytes:.2f}%\n"
 
     proc print_code_long(code: string, data: ref OrderedTable[string, int]) =
@@ -328,7 +328,7 @@ proc process(filename: File|string) =
         var count = 0;
         for n in data.values:
             count+=n
-        echo &"\n\e[1;34m状态码{code},共{count}次\e[00m"
+        echo &"\n\e[1;34m状态码{code},共{count}次,占比{(count*100).float/lines:.2f}%\e[00m"
         var i = 0;
         var n = 0;
         for u, num in data:
@@ -337,13 +337,13 @@ proc process(filename: File|string) =
                 stru = stru.alignLeft(t_width)
             else:
                 stru = stru.substr(0, t_width-1)
-            echo fmt"{stru} {num:>6.6} {num.float*100/lines:.2f}%"
+            echo fmt"{stru} {num:>6.6} {num.float*100/count.float:.2f}%"
             i+=1
             n+=num
             if i >= limit:
                 break
-        let part1 = (fmt"{n}/{total_lines}").alignLeft(t_width)
-        echo &"前{limit}项占比\n{part1} {data.len:6.6} {n.float*100/lines:.2f}%\n"
+        let part1 = (fmt"{n}/{count}").alignLeft(t_width)
+        echo &"前{limit}项占比\n{part1} {data.len:6.6} {n.float*100/count.float:.2f}%\n"
 
 
 

@@ -423,7 +423,7 @@ int print_code_long(int status_code, table *map, unsigned int total_lines, unsig
     {
         total += data[i]->value;
     }
-    printf("\n\e[1;34m状态码%d,共%d次\e[00m\n", status_code, total);
+    printf("\n\e[1;34m状态码%d,共%d次,占比%.2f%%\e[00m\n", status_code, total, (double)(100 * total) / (double)total_lines);
     unsigned long n = 0;
     const int limit = 100;
     char buf[128] = {0};
@@ -440,15 +440,15 @@ int print_code_long(int status_code, table *map, unsigned int total_lines, unsig
         strcpy(value, "%-");
         strcat(value, t_width_str);
         strcat(value, ".*s %6d %.2f%%\n");
-        printf(value, t_width, u, num, ((double)num / (double)total_lines) * 100);
+        printf(value, t_width, u, num, ((double)num / (double)total) * 100);
         n += num;
         free(data[i]);
     }
-    snprintf(buf, sizeof(buf), "%lu/%d", n, total_lines);
+    snprintf(buf, sizeof(buf), "%lu/%d", n, total);
     strcpy(value, "前%d项占比\n%-");
     strcat(value, t_width_str);
     strcat(value, "s %6d %.2f%%\n\n");
-    printf(value, limit, buf, len, ((double)n / (double)total_lines) * 100);
+    printf(value, limit, buf, len, ((double)n / (double)total) * 100);
     free(data);
     return 0;
 }

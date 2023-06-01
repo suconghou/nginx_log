@@ -657,7 +657,8 @@ int process(istream &fh)
         {
             count += data[i].first;
         }
-        cout << "\n\e[1;34m状态码" << name << ",共" << count << "次\e[00m" << endl;
+        snprintf(value, sizeof(value), "%.2f", (double)(count * 100) / (double)total_lines);
+        cout << "\n\e[1;34m状态码" << name << ",共" << count << "次,占比" << value << "%\e[00m" << endl;
         int n = 0;
         for (unsigned int i = 0; i < m.size(); i++)
         {
@@ -667,11 +668,11 @@ int process(istream &fh)
             }
             const auto u = data[i].second;
             const auto num = data[i].first;
-            printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, ((double)num / (double)total_lines) * 100);
+            printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, ((double)num / (double)count) * 100);
             n += num;
         }
-        snprintf(value, sizeof(value), "%d/%d", n, total_lines);
-        printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, m.size(), ((double)n / (double)total_lines) * 100);
+        snprintf(value, sizeof(value), "%d/%d", n, count);
+        printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, m.size(), ((double)n / (double)count) * 100);
         delete[] data;
         m.clear();
     };
