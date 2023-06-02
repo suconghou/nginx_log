@@ -124,95 +124,92 @@ private:
     int
     parse_item_trim_space(char *item_value, char_is_match cond, int strip_square, int result_strip_left_quote)
     {
-        int pad = 1;
+        while (index < len)
+        {
+            const unsigned char x = str[index];
+            if (x == ' ' || (strip_square && x == '['))
+            {
+                index++;
+            }
+            else
+            {
+                break;
+            }
+        }
         int found_start = -1;
         int found_end = -1;
-        int gotvalue = -1;
         int i = index;
         while (i < len)
         {
             const unsigned char x = str[i];
             i++;
-            if ((x == ' ' || (strip_square && x == '[')) && pad)
+            const unsigned char y = i < len ? str[i] : 0;
+            const unsigned char z = i >= 2 ? str[i - 2] : 0;
+            if (cond(x, y, z))
             {
-                index = i;
-                continue;
-            }
-            else
-            {
-                pad = 0;
-            }
-            if (gotvalue < 0)
-            {
-                const unsigned char y = i < len ? str[i] : 0;
-                const unsigned char z = i >= 2 ? str[i - 2] : 0;
-                if (cond(x, y, z))
-                {
-                    found_end = i - 1;
-                    if (found_start < 0)
-                    {
-                        found_start = found_end;
-                    }
-                    if (i < len)
-                    {
-                        continue;
-                    }
-                }
+                found_end = i - 1;
                 if (found_start < 0)
                 {
-                    goto end;
+                    found_start = found_end;
                 }
-                // 包含cond成立时当前字符x,如果结果字符串以某字符开始，我们配置了result_strip_left_quote开头
-                // 例如解析request_line,开头有引号,我们仅在生成结果时过滤
-                if (result_strip_left_quote > 0)
+                if (i < len)
                 {
-                    while (found_start < found_end)
-                    {
-                        if (str[found_start] == 34)
-                        {
-                            found_start++;
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
+                    continue;
                 }
-                const int v_len = found_end - found_start + 1;
-                strncpy(item_value, str + found_start, v_len);
-                item_value[v_len] = '\0';
-                gotvalue = 1;
-                if (i >= len)
+            }
+            if (found_start < 0)
+            {
+                return -1;
+            }
+            // 包含cond成立时当前字符x,如果结果字符串以某字符开始，我们配置了result_strip_left_quote开头
+            // 例如解析request_line,开头有引号,我们仅在生成结果时过滤
+            if (result_strip_left_quote > 0)
+            {
+                while (found_start < found_end)
                 {
-                    if (found_end == len - 1 || x == ' ')
+                    if (str[found_start] == 34)
                     {
-                        // 字符串已完全遍历
-                        index = len;
+                        found_start++;
                     }
                     else
                     {
-                        index = found_end + 1;
+                        break;
                     }
+                }
+            }
+            const int v_len = found_end - found_start + 1;
+            strncpy(item_value, str + found_start, v_len);
+            item_value[v_len] = '\0';
+            if (i >= len)
+            {
+                if (found_end == len - 1 || x == ' ')
+                {
+                    // 字符串已完全遍历
+                    index = len;
+                }
+                else
+                {
+                    index = found_end + 1;
                 }
             }
             else
             {
-                if (x == ' ' || (strip_square && x == ']'))
+                while (i < len)
                 {
-                    if (i < len)
-                    {
-                        continue;
-                    }
-                    else if (i == len)
+                    const unsigned char x = str[i];
+                    if (x == ' ' || (strip_square && x == ']'))
                     {
                         i++;
                     }
+                    else
+                    {
+                        break;
+                    }
                 }
-                index = i - 1;
-                break;
+                index = i;
             }
+            return found_start;
         }
-    end:
         return found_start;
     }
 
@@ -226,19 +223,17 @@ public:
 
     int parse_remote_user(char *item_value)
     {
-        int i = index;
-        while (i < len)
+        while (index < len)
         {
-            if (str[i] == '-')
+            if (str[index] == '-')
             {
-                i++;
+                index++;
             }
             else
             {
                 break;
             }
         }
-        index = i;
         return parse_item_trim_space(item_value, not_space, 0, 0);
     }
 
@@ -407,14 +402,23 @@ int process(istream &fh)
     unsigned int total_lines = 0;
 
     strMap remote_addr_data;
+    remote_addr_data.reserve(8192);
     strMap remote_user_data;
+    remote_user_data.reserve(64);
     strMap time_local_data;
+    time_local_data.reserve(16384);
     strMap request_line_data;
+    request_line_data.reserve(16384);
     strMap status_data;
+    status_data.reserve(64);
     strMap http_referer_data;
+    http_referer_data.reserve(8192);
     strMap http_user_agent_data;
+    http_user_agent_data.reserve(8192);
     strMap http_x_forwarded_for_data;
+    http_x_forwarded_for_data.reserve(2048);
     strMap http_sent_data;
+    http_sent_data.reserve(16384);
     statusMap http_bad_code_data;
 
     while (getline(fh, str))

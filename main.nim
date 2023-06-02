@@ -207,15 +207,15 @@ proc parse_upstream_header_time(this: var Line): string =
 
 
 proc process(filename: File|string) =
-    var remote_addr_data: OrderedTable[string, int];
-    var remote_user_data: OrderedTable[string, int];
-    var time_local_data: OrderedTable[string, int];
-    var request_line_data: OrderedTable[string, int];
-    var status_data: OrderedTable[string, int];
-    var http_referer_data: OrderedTable[string, int];
-    var http_user_agent_data: OrderedTable[string, int];
-    var http_x_forwarded_for_data: OrderedTable[string, int];
-    var http_sent_data: OrderedTable[string, int];
+    var remote_addr_data = newOrderedTable[string, int](8192);
+    var remote_user_data = newOrderedTable[string, int](64);
+    var time_local_data = newOrderedTable[string, int](16484);
+    var request_line_data = newOrderedTable[string, int](16384);
+    var status_data = newOrderedTable[string, int](64);
+    var http_referer_data = newOrderedTable[string, int](8192);
+    var http_user_agent_data = newOrderedTable[string, int](8192);
+    var http_x_forwarded_for_data = newOrderedTable[string, int](2048);
+    var http_sent_data = newOrderedTable[string, int](16384);
     var http_bad_code_data: OrderedTable[string, ref OrderedTable[string, int]];
     var total_bytes_sent: uint64 = 0;
     var total_lines: uint = 0;
@@ -268,17 +268,13 @@ proc process(filename: File|string) =
     let lines = total_lines.float
     let total_bytes = total_bytes_sent.float
 
-    proc print_stat_long(name: string, data: var OrderedTable[string, int]) =
+    proc print_stat_long(name: string, data: var OrderedTableRef[string, int]) =
         data.sort(proc (x, y: (string, int)): int = y[1]-x[1])
         echo &"\n\e[1;34m{name}\e[00m"
         var i = 0;
         var n = 0;
         for u, num in data:
-            var stru = u
-            if stru.len < t_width:
-                stru = stru.alignLeft(t_width)
-            else:
-                stru = stru.substr(0, t_width-1)
+            var stru = if u.len < t_width: u.alignLeft(t_width) else: u.substr(0, t_width-1)
             echo fmt"{stru} {num:>6.6} {num.float*100/lines:.2f}%"
             i+=1
             n+=num
@@ -287,18 +283,14 @@ proc process(filename: File|string) =
         let part1 = (fmt"{n}/{total_lines}").alignLeft(t_width)
         echo &"前{limit}项占比\n{part1} {data.len:6.6} {n.float*100/lines:.2f}%\n"
 
-    proc print_sent_long(name: string, data: var OrderedTable[string, int]) =
+    proc print_sent_long(name: string, data: var OrderedTableRef[string, int]) =
         data.sort(proc (x, y: (string, int)): int = y[1]-x[1])
         echo &"\n\e[1;34m{name}\e[00m"
         var i = 0;
         var n = 0;
         let max_width = t_width - 6
         for u, num in data:
-            var stru = u
-            if stru.len < max_width:
-                stru = stru.alignLeft(max_width)
-            else:
-                stru = stru.substr(0, max_width-1)
+            var stru = if u.len < max_width: u.alignLeft(max_width) else: u.substr(0, max_width-1)
             echo fmt"{stru} {formatSize(num,prefix = bpColloquial, includeSpace = true):>12.12} {num.float*100/total_bytes:.2f}%"
             i+=1
             n+=num
@@ -316,11 +308,7 @@ proc process(filename: File|string) =
         var i = 0;
         var n = 0;
         for u, num in data:
-            var stru = u
-            if stru.len < t_width:
-                stru = stru.alignLeft(t_width)
-            else:
-                stru = stru.substr(0, t_width-1)
+            var stru = if u.len < t_width: u.alignLeft(t_width) else: u.substr(0, t_width-1)
             echo fmt"{stru} {num:>6.6} {num.float*100/count.float:.2f}%"
             i+=1
             n+=num
