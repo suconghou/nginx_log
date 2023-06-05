@@ -22,14 +22,12 @@ func substr(s: string, first: int, last: int): string =
 
 # 根据条件解析，并去除前置后置x字符
 proc parse_item_trimx(this: var Line, left: set[char], right: set[char], cond: proc): string =
-    var i = this.index;
-    while i < this.str.len:
-        if this.str[i] in left:
-            i+=1
+    while this.index < this.str.len:
+        if this.str[this.index] in left:
+            this.index+=1
         else:
             break
-    this.index = i
-    var item_value: string;
+    var i = this.index;
     var found_start = -1;
     var found_end = -1;
     while i < this.str.len:
@@ -49,46 +47,37 @@ proc parse_item_trimx(this: var Line, left: set[char], right: set[char], cond: p
         if found_start < 0:
             # 完全没有匹配到
             raise newException(ValueError, "匹配失败:"&this.str)
-        # cond成立时,则包含当前字符x，否则不包含，截取的字符最少1字节
-        item_value = this.str.substr(found_start, found_end)
         while i < this.str.len:
             if this.str[i] in right:
                 i+=1
             else:
                 break
         this.index = i;
-        return item_value
-
-    # 防止前置字符去除时，直接continue完所有
-    if found_start < 0:
-        raise newException(ValueError, "匹配失败:"&this.str)
-    return item_value
+        # cond成立时,则包含当前字符x，否则不包含，截取的字符最少1字节
+        return this.str.substr(found_start, found_end)
+    raise newException(ValueError, "匹配失败:"&this.str)
 
 proc parse_item_quote_string(this: var Line): string =
-    var i = this.index
     var quote_start = -1
-    var item_value: string;
-    while i < this.str.len:
+    while this.index < this.str.len:
         if quote_start < 0:
-            if this.str[i] == '\32':
-                i+=1
+            if this.str[this.index] == '\32':
+                this.index+=1
                 continue
-            elif this.str[i] == '\34':
-                quote_start = i
-                i+=1
+            elif this.str[this.index] == '\34':
+                quote_start = this.index
+                this.index+=1
                 continue
             else:
                 break
-        if this.str[i] == '\34':
-            item_value = this.str.substr(quote_start+1, i-1)
-            i+=1
-            break
+        if this.str[this.index] == '\34':
+            let end_s = this.index - 1;
+            this.index += 1
+            # 不包含quote_start的位置，也不包含最后i的位置
+            return this.str.substr(quote_start+1, end_s)
         else:
-            i+=1
-    this.index = i
-    if quote_start < 0:
-        raise newException(ValueError, "匹配失败:"&this.str)
-    return item_value
+            this.index+=1
+    raise newException(ValueError, "匹配失败:"&this.str)
 
 
 
@@ -122,13 +111,12 @@ proc parse_remote_addr(this: var Line): string =
 
 # 去除可能存在的-,非空格
 proc parse_remote_user(this: var Line): string =
-    var i = this.index
-    while i < this.str.len:
-        if this.str[i] == '\45':
-            i+=1
-        else:
-            break;
-    this.index = i
+    while this.index < this.str.len:
+        case this.str[this.index]:
+            of '\45':
+                this.index+=1
+            else:
+                break;
     return this.parse_item_trimx(blank, blank, not_space)
 
 # 匹配到],并且下一个是空格
@@ -357,94 +345,4 @@ except CatchableError:
     echo getCurrentExceptionMsg()
     quit(1)
 
-
-
-runnableExamples:
-
-    proc test1(line: string) =
-        var l = Line(str: line)
-        let remote_addr = l.parse_remote_addr()
-        # echo "remote_addr:["&remote_addr&"]"
-        # echo l.str
-        let remote_user = l.parse_remote_user()
-        # echo "remote_user:["&remote_user&"]"
-        # echo l.str
-        let time_local = l.parse_time_local()
-        # echo "time_local:["&time_local&"]"
-        # echo l.str
-        let request_line = l.parse_request_line()
-        # echo request_line
-        # echo "request_line:["&request_line&"]"
-        # echo l.str
-        let status_code = l.parse_status_code()
-        # echo "status_code:["&status_code&"]"
-        # echo l.str
-
-        let body_bytes_sent = l.parse_body_bytes_sent()
-        # echo body_bytes_sent
-        # echo "body_bytes_sent:["&body_bytes_sent&"]"
-        # echo l.str
-
-        let http_referer = l.parse_http_referer()
-        # echo "http_referer:["&http_referer&"]"
-        # echo l.str
-
-        let http_user_agent = l.parse_http_user_agent()
-        # echo http_user_agent
-        # echo "http_user_agent:["&http_user_agent&"]"
-        # echo l.str
-
-        let http_x_forwarded_for = l.parse_http_x_forwarded_for()
-        # echo "http_x_forwarded_for:["&http_x_forwarded_for&"]"
-        # echo l.str
-
-
-        # let host = l.parse_host()
-        # echo "host:["&host&"]"
-        # echo l.str
-
-        # let request_length = l.parse_request_length()
-        # echo request_length
-        # echo "request_length:["&request_length&"]"
-        # echo l.str
-
-        # let bytes_sent = l.parse_bytes_sent()
-        # echo "bytes_sent:["&bytes_sent&"]"
-        # echo l.str
-
-        # let upstream_addr = l.parse_upstream_addr()
-        # echo "upstream_addr:["&upstream_addr&"]"
-        # echo l.str
-
-        # let upstream_status = l.parse_upstream_status()
-        # echo "upstream_status:["&upstream_status&"]"
-        # echo l.str
-
-        # let request_time = l.parse_request_time()
-        # echo "request_time:["&request_time&"]"
-        # echo l.str
-
-
-        # let upstream_response_time = l.parse_upstream_response_time()
-        # echo "["&upstream_response_time&"]"
-        # echo l.str
-
-
-
-        # let upstream_connect_time = l.parse_upstream_connect_time()
-        # echo "[upstream_connect_time:"&upstream_connect_time&"]"
-        # echo l.str
-
-
-        # let upstream_header_time = l.parse_upstream_header_time()
-        # echo "[upstream_header_time:"&upstream_header_time&"]"
-        # echo l.str
-
-    for line in stdin.lines:
-        try:
-            test1(line)
-        except:
-            raise
-            stderr.writeLine(getCurrentExceptionMsg())
-            stderr.writeLine(line)
 

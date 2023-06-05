@@ -59,10 +59,11 @@ int digital_or_none_end(unsigned char x, unsigned char y, unsigned char z)
 // offset 字符串坐标
 int parse_item_trim_space(const char *s, int *offset, int len, char *item_value, char_is_match cond, int strip_square)
 {
+    unsigned char x, y, z;
     int i = *offset;
     while (i < len)
     {
-        unsigned char x = s[i];
+        x = s[i];
         if (x == ' ' || (strip_square && x == '['))
         {
             i++;
@@ -75,12 +76,13 @@ int parse_item_trim_space(const char *s, int *offset, int len, char *item_value,
     *offset = i;
     int found_start = -1;
     int found_end = -1;
+
     while (i < len)
     {
-        const unsigned char x = s[i];
+        x = s[i];
         i++;
-        const unsigned char y = i < len ? s[i] : 0;
-        const unsigned char z = i >= 2 ? s[i - 2] : 0;
+        y = i < len ? s[i] : 0;
+        z = i >= 2 ? s[i - 2] : 0;
         if (cond(x, y, z))
         {
             found_end = i - 1;
@@ -103,7 +105,7 @@ int parse_item_trim_space(const char *s, int *offset, int len, char *item_value,
         item_value[v_len] = '\0';
         while (i < len)
         {
-            const unsigned char x = s[i];
+            x = s[i];
             if (x == ' ' || (strip_square && x == ']'))
             {
                 i++;

@@ -77,9 +77,10 @@ private:
     int
     parse_item_trim_space(char *item_value, char_is_match cond, bool strip_square)
     {
+        unsigned char x, y, z;
         while (index < len)
         {
-            const unsigned char x = str[index];
+            x = str[index];
             if (x == ' ' || (strip_square && x == '['))
             {
                 index++;
@@ -91,21 +92,20 @@ private:
         }
         int found_start = -1;
         int found_end = -1;
-        int i = index;
-        while (i < len)
+        while (index < len)
         {
-            const unsigned char x = str[i];
-            i++;
-            const unsigned char y = i < len ? str[i] : 0;
-            const unsigned char z = i >= 2 ? str[i - 2] : 0;
+            x = str[index];
+            index++;
+            y = index < len ? str[index] : 0;
+            z = index >= 2 ? str[index - 2] : 0;
             if (cond(x, y, z))
             {
-                found_end = i - 1;
+                found_end = index - 1;
                 if (found_start < 0)
                 {
                     found_start = found_end;
                 }
-                if (i < len)
+                if (index < len)
                 {
                     continue;
                 }
@@ -118,19 +118,18 @@ private:
             const int v_len = found_end - found_start + 1;
             memcpy(item_value, str + found_start, v_len);
             item_value[v_len] = '\0';
-            while (i < len)
+            while (index < len)
             {
-                const unsigned char x = str[i];
+                x = str[index];
                 if (x == ' ' || (strip_square && x == ']'))
                 {
-                    i++;
+                    index++;
                 }
                 else
                 {
                     break;
                 }
             }
-            index = i;
             return found_start;
         }
         return found_start;
