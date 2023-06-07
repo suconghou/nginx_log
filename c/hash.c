@@ -17,18 +17,77 @@ typedef struct table
     unsigned int dataLen; // 数组的卡槽数量
 } table;
 
-// fnv1a32
-#define FNV_PRIME_32 16777619
-#define FNV_OFFSET_32 2166136261U
-static inline unsigned int hash(const char *s)
+// xxhash32 fast
+uint32_t hash(const char *data)
 {
-    unsigned int hash = FNV_OFFSET_32, i;
-    for (i = 0; i < strlen(s); i++)
+    const unsigned int len = strlen(data);
+    const uint8_t *p = (const uint8_t *)data;
+    const uint8_t *end = p + len;
+    uint32_t h32 = 0x9e3779b9;
+    if (len >= 16)
     {
-        hash = hash ^ (s[i]);       // xor next byte into the bottom of the hash
-        hash = hash * FNV_PRIME_32; // Multiply by prime number found to work well
+        const uint8_t *limit = end - 16;
+        uint32_t v1 = h32;
+        uint32_t v2 = h32 * 2;
+        uint32_t v3 = h32 * 3;
+        uint32_t v4 = h32 * 4;
+        do
+        {
+            v1 += *(const uint32_t *)p * 0x85ebca6b;
+            v1 = (v1 << 13) | (v1 >> 19);
+            v1 *= 5;
+            v2 += *(const uint32_t *)(p + 4) * 0x85ebca6b;
+            v2 = (v2 << 13) | (v2 >> 19);
+            v2 *= 5;
+            v3 += *(const uint32_t *)(p + 8) * 0x85ebca6b;
+            v3 = (v3 << 13) | (v3 >> 19);
+            v3 *= 5;
+            v4 += *(const uint32_t *)(p + 12) * 0x85ebca6b;
+            v4 = (v4 << 13) | (v4 >> 19);
+            v4 *= 5;
+            p += 16;
+        } while (p <= limit);
+        h32 = (v1 << 1) | (v1 >> 31);
+        h32 += (v2 << 7) | (v2 >> 25);
+        h32 += (v3 << 12) | (v3 >> 20);
+        h32 += (v4 << 18) | (v4 >> 14);
     }
-    return hash;
+    while (p + 4 <= end)
+    {
+        h32 += *(const uint32_t *)p * 0x85ebca6b;
+        h32 = (h32 << 13) | (h32 >> 19);
+        h32 *= 5;
+        p += 4;
+    }
+    if (p + 3 <= end)
+    {
+        h32 += *(const uint16_t *)p * 0x85eb;
+        h32 = (h32 << 13) | (h32 >> 19);
+        h32 *= 5;
+        p += 2;
+        h32 += *p * 0x85;
+        h32 = (h32 << 13) | (h32 >> 19);
+        h32 *= 5;
+    }
+    else if (p + 2 <= end)
+    {
+        h32 += *(const uint16_t *)p * 0x85eb;
+        h32 = (h32 << 13) | (h32 >> 19);
+        h32 *= 5;
+        p += 2;
+    }
+    else if (p + 1 <= end)
+    {
+        h32 += *p * 0x85;
+        h32 = (h32 << 13) | (h32 >> 19);
+        h32 *= 5;
+    }
+    h32 ^= h32 >> 16;
+    h32 *= 0x85ebca6b;
+    h32 ^= h32 >> 13;
+    h32 *= 0xc2b2ae35;
+    h32 ^= h32 >> 16;
+    return h32;
 }
 
 // 必须是2的n次方
@@ -59,10 +118,10 @@ unsigned int forEach(table *t)
 // 无需手动调用，会自动检测需要时，自动调用
 static inline void _enlarge(table *t)
 {
-    unsigned int l = t->dataLen;
+    const unsigned int l = t->dataLen;
     unsigned int num = t->counter;
     tableItem **data = (tableItem **)calloc(l * 2, sizeof(tableItem *));
-    unsigned int maxHash = l * 2 - 1;
+    const unsigned int maxHash = l * 2 - 1;
     for (int i = 0; i < l && num > 0; i++)
     {
         if (t->dataArr[i] != NULL)
@@ -86,15 +145,15 @@ static inline void _enlarge(table *t)
 // 我们可以更具此返回值，如果是更新则传入的key再堆上分配内存，可以free掉
 int incr(table *t, char *key, int n)
 {
-    // 按照nim的内部实现，存储的成员数已达插槽数量的三分之二或者空闲的插槽不足4个
+    // 按照nim的内部实现，存储的成员数已达插槽数量的三分之二或者空闲的插槽不足4个,我们newTable最小是64，所以不用检测小于4这个逻辑
     // 则必须扩容
-    if (t->dataLen * 2 < t->counter * 3 || t->dataLen - t->counter < 4)
+    if (t->dataLen * 2 < t->counter * 3)
     {
         _enlarge(t);
     }
     // 扩容后dataLen将会变化，之前存储的成员都会移动
-    unsigned int maxHash = t->dataLen - 1; // 使用异或快速计算的参数，代表插槽数量-1
-    unsigned int hc = hash(key);
+    const unsigned int maxHash = t->dataLen - 1; // 使用异或快速计算的参数，代表插槽数量-1
+    const unsigned int hc = hash(key);
     unsigned int h = hc & maxHash; // 计算应落到哪个插槽
     while (t->dataArr[h] != NULL)
     {
@@ -123,7 +182,7 @@ int incr(table *t, char *key, int n)
 // 排序过后不应该在新增数据到table了
 tableItem **sort22(table *t)
 {
-    int num = t->counter;
+    const int num = t->counter;
     tableItem **data = (tableItem **)calloc(num, sizeof(tableItem *));
     int index = 0;
     for (int i = 0; i < t->dataLen && index < num; i++)

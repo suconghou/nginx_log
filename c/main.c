@@ -57,7 +57,7 @@ int digital_or_none_end(unsigned char x, unsigned char y, unsigned char z)
 }
 
 // offset 字符串坐标
-int parse_item_trim_space(const char *s, int *offset, int len, char *item_value, char_is_match cond, int strip_square)
+int parse_item_trim_space(const char *s, int *offset, const int len, char *item_value, char_is_match cond, const int strip_square)
 {
     unsigned char x, y, z;
     int i = *offset;
@@ -121,7 +121,7 @@ int parse_item_trim_space(const char *s, int *offset, int len, char *item_value,
     return found_start;
 }
 
-int parse_item_quote_string(const char *s, int *offset, int len, char *item_value)
+int parse_item_quote_string(const char *s, int *offset, const int len, char *item_value)
 {
     int quote_start = -1;
     int i = *offset;
@@ -163,12 +163,12 @@ int parse_item_quote_string(const char *s, int *offset, int len, char *item_valu
     return quote_start;
 }
 
-int parse_remote_addr(const char *s, int *offset, int len, char *item_value)
+int parse_remote_addr(const char *s, int *offset, const int len, char *item_value)
 {
     return parse_item_trim_space(s, offset, len, item_value, digital_dot_colon, 0);
 }
 
-int parse_remote_user(const char *s, int *offset, int len, char *item_value)
+int parse_remote_user(const char *s, int *offset, const int len, char *item_value)
 {
     int i = *offset;
     while (i < len)
@@ -186,87 +186,87 @@ int parse_remote_user(const char *s, int *offset, int len, char *item_value)
     return parse_item_trim_space(s, offset, len, item_value, not_space, 0);
 }
 
-int parse_time_local(const char *s, int *offset, int len, char *item_value)
+int parse_time_local(const char *s, int *offset, const int len, char *item_value)
 {
     return parse_item_trim_space(s, offset, len, item_value, square_right_space, 1);
 }
 
-int parse_request_line(const char *s, int *offset, int len, char *item_value)
+int parse_request_line(const char *s, int *offset, const int len, char *item_value)
 {
     return parse_item_quote_string(s, offset, len, item_value);
 }
 
-int parse_status_code(const char *s, int *offset, int len, char *item_value)
+int parse_status_code(const char *s, int *offset, const int len, char *item_value)
 {
     return parse_item_trim_space(s, offset, len, item_value, digital, 0);
 }
 
-int parse_body_bytes_sent(const char *s, int *offset, int len, char *item_value)
+int parse_body_bytes_sent(const char *s, int *offset, const int len, char *item_value)
 {
     return parse_item_trim_space(s, offset, len, item_value, digital, 0);
 }
 
-int parse_http_referer(const char *s, int *offset, int len, char *item_value)
+int parse_http_referer(const char *s, int *offset, const int len, char *item_value)
 {
     return parse_item_quote_string(s, offset, len, item_value);
 }
 
-int parse_http_user_agent(const char *s, int *offset, int len, char *item_value)
+int parse_http_user_agent(const char *s, int *offset, const int len, char *item_value)
 {
     return parse_item_quote_string(s, offset, len, item_value);
 }
 
-int parse_http_x_forwarded_for(const char *s, int *offset, int len, char *item_value)
+int parse_http_x_forwarded_for(const char *s, int *offset, const int len, char *item_value)
 {
     return parse_item_quote_string(s, offset, len, item_value);
 }
 
-int parse_host(const char *s, int *offset, int len, char *item_value)
+int parse_host(const char *s, int *offset, const int len, char *item_value)
 {
     return parse_item_trim_space(s, offset, len, item_value, string_end, 0);
 }
 
-int parse_request_length(const char *s, int *offset, int len, char *item_value)
+int parse_request_length(const char *s, int *offset, const int len, char *item_value)
 {
     return parse_item_trim_space(s, offset, len, item_value, digital, 0);
 }
 
-int parse_bytes_sent(const char *s, int *offset, int len, char *item_value)
+int parse_bytes_sent(const char *s, int *offset, const int len, char *item_value)
 {
     return parse_item_trim_space(s, offset, len, item_value, digital, 0);
 }
 
-int parse_upstream_addr(const char *s, int *offset, int len, char *item_value)
+int parse_upstream_addr(const char *s, int *offset, const int len, char *item_value)
 {
     return parse_item_trim_space(s, offset, len, item_value, digital_or_none_end, 0);
 }
 
-int parse_upstream_status(const char *s, int *offset, int len, char *item_value)
+int parse_upstream_status(const char *s, int *offset, const int len, char *item_value)
 {
     return parse_item_trim_space(s, offset, len, item_value, digital_or_none_end, 0);
 }
 
-int parse_request_time(const char *s, int *offset, int len, char *item_value)
+int parse_request_time(const char *s, int *offset, const int len, char *item_value)
 {
     return parse_item_trim_space(s, offset, len, item_value, digital_dot, 0);
 }
 
-int parse_upstream_response_time(const char *s, int *offset, int len, char *item_value)
+int parse_upstream_response_time(const char *s, int *offset, const int len, char *item_value)
 {
     return parse_item_trim_space(s, offset, len, item_value, digital_dot_minus, 0);
 }
 
-int parse_upstream_connect_time(const char *s, int *offset, int len, char *item_value)
+int parse_upstream_connect_time(const char *s, int *offset, const int len, char *item_value)
 {
     return parse_item_trim_space(s, offset, len, item_value, digital_dot_minus, 0);
 }
 
-int parse_upstream_header_time(const char *s, int *offset, int len, char *item_value)
+int parse_upstream_header_time(const char *s, int *offset, const int len, char *item_value)
 {
     return parse_item_trim_space(s, offset, len, item_value, digital_dot_minus, 0);
 }
 
-static inline void byteFormat(unsigned long s, char *out)
+static inline void byteFormat(const unsigned long s, char *out)
 {
     char *unit = "KMGTPEZY";
     if (s < 1024)
@@ -298,7 +298,7 @@ static unsigned int get_width()
     return size.ws_col;
 }
 
-int print_stat_long(const char *name, table *map, unsigned int total_lines, unsigned int t_width, char *t_width_str)
+int print_stat_long(const char *name, table *map, const unsigned int total_lines, const unsigned int t_width, const char *t_width_str)
 {
     printf("\n\e[1;34m%s\e[00m\n", name);
     const unsigned int len = map->counter;
@@ -332,7 +332,7 @@ int print_stat_long(const char *name, table *map, unsigned int total_lines, unsi
     return 0;
 }
 
-int print_sent_long(const char *name, table *map, unsigned int total_lines, unsigned long total_bytes_sent, unsigned int t_width)
+int print_sent_long(const char *name, table *map, const unsigned int total_lines, const unsigned long total_bytes_sent, const unsigned int t_width)
 {
     printf("\n\e[1;34m%s\e[00m\n", name);
     const unsigned int len = map->counter;
@@ -375,7 +375,7 @@ int print_sent_long(const char *name, table *map, unsigned int total_lines, unsi
     return 0;
 }
 
-int print_code_long(int status_code, table *map, unsigned int total_lines, unsigned int t_width, char *t_width_str)
+int print_code_long(int status_code, table *map, const unsigned int total_lines, const unsigned int t_width, const char *t_width_str)
 {
     unsigned int total = 0;
     const unsigned int len = map->counter;
@@ -547,7 +547,7 @@ int main(int argc, char *argv[])
             {
                 if (strcmp(status_code, "200") != 0)
                 {
-                    unsigned int status_code_int = atoi(status_code);
+                    const unsigned int status_code_int = atoi(status_code);
                     if (http_bad_code_data[status_code_int] == NULL)
                     {
                         http_bad_code_data[status_code_int] = newTable(1024);
@@ -568,7 +568,7 @@ int main(int argc, char *argv[])
             incr(http_sent_data, request_line, body_bytes_sent);
             if (strcmp(status_code, "200") != 0)
             {
-                unsigned int status_code_int = atoi(status_code);
+                const unsigned int status_code_int = atoi(status_code);
                 if (http_bad_code_data[status_code_int] == NULL)
                 {
                     http_bad_code_data[status_code_int] = newTable(1024);
