@@ -17,77 +17,32 @@ typedef struct table
     unsigned int dataLen; // 数组的卡槽数量
 } table;
 
-// xxhash32 fast
-uint32_t hash(const char *data)
+// 最快的hash算法 FNV1A-Pippip https://github.com/rurban/smhasher/issues/73#issuecomment-543378852
+// https://github.com/Cyan4973/xxHash/issues/275#issuecomment-546635300
+
+#define _PADr_KAZE(x, n) (((x) << (n)) >> (n))
+unsigned int hash(const char *str, const unsigned int wrdlen)
 {
-    const unsigned int len = strlen(data);
-    const uint8_t *p = (const uint8_t *)data;
-    const uint8_t *end = p + len;
-    uint32_t h32 = 0x9e3779b9;
-    if (len >= 16)
+    const unsigned int PRIME = 591798841;
+    unsigned int hash32;
+    unsigned long long hash64 = 14695981039346656037ULL;
+    const char *p = str;
+    int i, Cycles, NDhead;
+    if (wrdlen > 8)
     {
-        const uint8_t *limit = end - 16;
-        uint32_t v1 = h32;
-        uint32_t v2 = h32 * 2;
-        uint32_t v3 = h32 * 3;
-        uint32_t v4 = h32 * 4;
-        do
+        Cycles = ((wrdlen - 1) >> 4) + 1;
+        NDhead = wrdlen - (Cycles << 3);
+        for (i = 0; i < Cycles; i++)
         {
-            v1 += *(const uint32_t *)p * 0x85ebca6b;
-            v1 = (v1 << 13) | (v1 >> 19);
-            v1 *= 5;
-            v2 += *(const uint32_t *)(p + 4) * 0x85ebca6b;
-            v2 = (v2 << 13) | (v2 >> 19);
-            v2 *= 5;
-            v3 += *(const uint32_t *)(p + 8) * 0x85ebca6b;
-            v3 = (v3 << 13) | (v3 >> 19);
-            v3 *= 5;
-            v4 += *(const uint32_t *)(p + 12) * 0x85ebca6b;
-            v4 = (v4 << 13) | (v4 >> 19);
-            v4 *= 5;
-            p += 16;
-        } while (p <= limit);
-        h32 = (v1 << 1) | (v1 >> 31);
-        h32 += (v2 << 7) | (v2 >> 25);
-        h32 += (v3 << 12) | (v3 >> 20);
-        h32 += (v4 << 18) | (v4 >> 14);
+            hash64 = (hash64 ^ (*(unsigned long long *)(p))) * PRIME;
+            hash64 = (hash64 ^ (*(unsigned long long *)(p + NDhead))) * PRIME;
+            p += 8;
+        }
     }
-    while (p + 4 <= end)
-    {
-        h32 += *(const uint32_t *)p * 0x85ebca6b;
-        h32 = (h32 << 13) | (h32 >> 19);
-        h32 *= 5;
-        p += 4;
-    }
-    if (p + 3 <= end)
-    {
-        h32 += *(const uint16_t *)p * 0x85eb;
-        h32 = (h32 << 13) | (h32 >> 19);
-        h32 *= 5;
-        p += 2;
-        h32 += *p * 0x85;
-        h32 = (h32 << 13) | (h32 >> 19);
-        h32 *= 5;
-    }
-    else if (p + 2 <= end)
-    {
-        h32 += *(const uint16_t *)p * 0x85eb;
-        h32 = (h32 << 13) | (h32 >> 19);
-        h32 *= 5;
-        p += 2;
-    }
-    else if (p + 1 <= end)
-    {
-        h32 += *p * 0x85;
-        h32 = (h32 << 13) | (h32 >> 19);
-        h32 *= 5;
-    }
-    h32 ^= h32 >> 16;
-    h32 *= 0x85ebca6b;
-    h32 ^= h32 >> 13;
-    h32 *= 0xc2b2ae35;
-    h32 ^= h32 >> 16;
-    return h32;
+    else
+        hash64 = (hash64 ^ _PADr_KAZE(*(unsigned long long *)(p + 0), (8 - wrdlen) << 3)) * PRIME;
+    hash32 = (unsigned int)(hash64 ^ (hash64 >> 32));
+    return hash32 ^ (hash32 >> 16);
 }
 
 // 必须是2的n次方
@@ -153,7 +108,7 @@ int incr(table *t, char *key, int n)
     }
     // 扩容后dataLen将会变化，之前存储的成员都会移动
     const unsigned int maxHash = t->dataLen - 1; // 使用异或快速计算的参数，代表插槽数量-1
-    const unsigned int hc = hash(key);
+    const unsigned int hc = hash(key, strlen(key));
     unsigned int h = hc & maxHash; // 计算应落到哪个插槽
     while (t->dataArr[h] != NULL)
     {
