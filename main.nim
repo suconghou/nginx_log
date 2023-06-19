@@ -187,16 +187,16 @@ proc parse_upstream_header_time(this: var Line): string =
 
 
 proc process(filename: File|string) =
-    var remote_addr_data = newOrderedTable[string, int](8192);
-    var remote_user_data = newOrderedTable[string, int](64);
-    var time_local_data = newOrderedTable[string, int](16484);
-    var request_line_data = newOrderedTable[string, int](16384);
-    var status_data = newOrderedTable[string, int](64);
-    var http_referer_data = newOrderedTable[string, int](8192);
-    var http_user_agent_data = newOrderedTable[string, int](8192);
-    var http_x_forwarded_for_data = newOrderedTable[string, int](2048);
-    var http_sent_data = newOrderedTable[string, int](16384);
-    var http_bad_code_data: OrderedTable[string, ref OrderedTable[string, int]];
+    var remote_addr_data = newCountTable[string](8192);
+    var remote_user_data = newCountTable[string](64);
+    var time_local_data = newCountTable[string](16384);
+    var request_line_data = newCountTable[string](16384);
+    var status_data = newCountTable[string](64);
+    var http_referer_data = newCountTable[string](8192);
+    var http_user_agent_data = newCountTable[string](8192);
+    var http_x_forwarded_for_data = newCountTable[string](2048);
+    var http_sent_data = newCountTable[string](16384);
+    var http_bad_code_data: OrderedTable[string, ref CountTable[string]];
     var total_bytes_sent: uint64 = 0;
     var total_lines: uint = 0;
 
@@ -218,17 +218,17 @@ proc process(filename: File|string) =
 
         total_bytes_sent+=bytes_sent_num
 
-        remote_addr_data.mgetOrPut(remote_addr, 0) += 1
-        remote_user_data.mgetOrPut(remote_user, 0) += 1
-        time_local_data.mgetOrPut(time_local, 0) += 1
-        request_line_data.mgetOrPut(request_line, 0) += 1
-        status_data.mgetOrPut(status_code, 0) += 1
-        http_referer_data.mgetOrPut(http_referer, 0) += 1
-        http_user_agent_data.mgetOrPut(http_user_agent, 0) += 1
-        http_x_forwarded_for_data.mgetOrPut(http_x_forwarded_for, 0) += 1
-        http_sent_data.mgetOrPut(request_line, 0) += bytes_sent_num.int
+        remote_addr_data.inc(remote_addr)
+        remote_user_data.inc(remote_user)
+        time_local_data.inc(time_local)
+        request_line_data.inc(request_line)
+        status_data.inc(status_code)
+        http_referer_data.inc(http_referer)
+        http_user_agent_data.inc(http_user_agent)
+        http_x_forwarded_for_data.inc(http_x_forwarded_for)
+        http_sent_data.inc(request_line, bytes_sent_num.int)
         if status_code != "200":
-            http_bad_code_data.mgetOrPut(status_code, newOrderedTable[string, int]()).mgetOrPut(request_line, 0)+=1
+            http_bad_code_data.mgetOrPut(status_code, newCountTable[string]()).inc(request_line)
 
     for line in filename.lines:
         try:
@@ -248,8 +248,8 @@ proc process(filename: File|string) =
     let lines = total_lines.float
     let total_bytes = total_bytes_sent.float
 
-    proc print_stat_long(name: string, data: var OrderedTableRef[string, int]) =
-        data.sort(proc (x, y: (string, int)): int = y[1]-x[1])
+    proc print_stat_long(name: string, data: ref CountTable[string]) =
+        data.sort()
         echo &"\n\e[1;34m{name}\e[00m"
         var i = 0;
         var n = 0;
@@ -263,8 +263,8 @@ proc process(filename: File|string) =
         let part1 = (fmt"{n}/{total_lines}").alignLeft(t_width)
         echo &"前{limit}项占比\n{part1} {data.len:6.6} {n.float*100/lines:.2f}%\n"
 
-    proc print_sent_long(name: string, data: var OrderedTableRef[string, int]) =
-        data.sort(proc (x, y: (string, int)): int = y[1]-x[1])
+    proc print_sent_long(name: string, data: ref CountTable[string]) =
+        data.sort()
         echo &"\n\e[1;34m{name}\e[00m"
         var i = 0;
         var n = 0;
@@ -279,8 +279,8 @@ proc process(filename: File|string) =
         let part1 = (fmt"{formatSize(n,prefix = bpColloquial, includeSpace = true)}/{formatSize(total_bytes_sent.int64,prefix = bpColloquial, includeSpace = true)}").alignLeft(max_width)
         echo &"前{limit}项占比\n{part1} {data.len:12.12} {n.float*100/total_bytes:.2f}%\n"
 
-    proc print_code_long(code: string, data: ref OrderedTable[string, int]) =
-        data.sort(proc (x, y: (string, int)): int = y[1]-x[1])
+    proc print_code_long(code: string, data: ref CountTable[string]) =
+        data.sort()
         var count = 0;
         for n in data.values:
             count+=n
@@ -327,8 +327,7 @@ proc process(filename: File|string) =
     print_sent_long("HTTP流量占比统计", http_sent_data)
 
     # 非200状态码
-    http_bad_code_data.sort(proc (x, y: (string, ref OrderedTable[string,
-            int])): int = cmp(x[0], y[0]))
+    http_bad_code_data.sort(proc (x, y: (string, ref CountTable[string])): int = cmp(x[0], y[0]))
     for code, items in http_bad_code_data:
         print_code_long(code, items)
 
