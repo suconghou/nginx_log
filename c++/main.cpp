@@ -59,8 +59,8 @@ class Line
 {
 private:
     int index;
-    int len;
-    char const *str;
+    const int len;
+    const char *const str;
 
     int
     parse_item_trim_space(char *item_value, char_is_match cond)
@@ -258,11 +258,9 @@ public:
     }
 };
 
-Line::Line(char const *line)
+Line::Line(const char *const line) : len(strlen(line)), str(line)
 {
-    str = line;
     index = 0;
-    len = strlen(line);
 }
 
 static inline void byteFormat(unsigned long s, char *out)
@@ -332,7 +330,7 @@ int get_width()
 
 int process(istream &fh)
 {
-    string str;
+    char str[8192] = {0};
     char value[8192] = {0}; // 后面多处使用此内存池复用
     unsigned long total_bytes_sent = 0;
     unsigned int total_lines = 0;
@@ -357,9 +355,9 @@ int process(istream &fh)
     http_sent_data.reserve(16384);
     statusMap http_bad_code_data;
 
-    while (getline(fh, str))
+    while (fh.getline(str, sizeof(str)))
     {
-        auto a = Line(str.c_str());
+        auto a = Line(str);
         if (a.parse_remote_addr(value) < 0)
         {
             cerr << str << endl;
