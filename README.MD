@@ -11,7 +11,7 @@ nim 使用 orc, arc 相比其他gc算法速度更快
 ## c 版本
 
 ```
-gcc -Wall -std=c11 -static-libstdc++ -static-libgcc --static -Wl,-Bstatic,--gc-sections -O3 -ffunction-sections -fdata-sections main.c -o ngx_log
+gcc -Wall -std=c17 -static-libstdc++ -static-libgcc --static -Wl,-Bstatic,--gc-sections -O3 -ffunction-sections -fdata-sections main.c -o ngx_log
 ```
 
 
