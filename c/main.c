@@ -50,7 +50,7 @@ int parse_item_trim_space(const char *s, int *offset, const int len, char *item_
     int i = *offset;
     while (i < len && s[i] == ' ')
     {
-        i++;
+        ++i;
     }
     *offset = i;
     int found_start = -1;
@@ -58,8 +58,7 @@ int parse_item_trim_space(const char *s, int *offset, const int len, char *item_
     unsigned char y = i > 0 ? s[i - 1] : 0;
     while (i < len)
     {
-        unsigned char x = s[i];
-        i++;
+        unsigned char x = s[i++];
         if (cond(x, y))
         {
             y = x;
@@ -83,7 +82,7 @@ int parse_item_trim_space(const char *s, int *offset, const int len, char *item_
         item_value[v_len] = '\0';
         while (i < len && s[i] == ' ')
         {
-            i++;
+            ++i;
         }
         *offset = i;
         return found_start;
@@ -96,13 +95,13 @@ int parse_item_wrap_string(const char *s, int *offset, const int len, char *item
     int i = *offset;
     while (i < len && s[i] == ' ')
     {
-        i++;
+        ++i;
     }
     if (i >= len || s[i] != left)
     {
         return -1;
     }
-    i++;
+    ++i;
     char *p = memchr(s + i, right, len - i);
     if (!p)
     {
@@ -123,16 +122,9 @@ int parse_remote_addr(const char *s, int *offset, const int len, char *item_valu
 int parse_remote_user(const char *s, int *offset, const int len, char *item_value)
 {
     int i = *offset;
-    while (i < len)
+    while (i < len && s[i] == '-')
     {
-        if (s[i] == '-')
-        {
-            i++;
-        }
-        else
-        {
-            break;
-        }
+        ++i;
     }
     *offset = i;
     return parse_item_trim_space(s, offset, len, item_value, not_space);

@@ -137,16 +137,9 @@ public:
 
     int parse_remote_user(char *item_value)
     {
-        while (index < len)
+        while (index < len && str[index] == '-')
         {
-            if (str[index] == '-')
-            {
-                ++index;
-            }
-            else
-            {
-                break;
-            }
+            ++index;
         }
         return parse_item_trim_space(item_value, not_space);
     }

@@ -85,12 +85,8 @@ proc parse_remote_addr(this: var Line): string =
 
 # 去除可能存在的-,非空格
 proc parse_remote_user(this: var Line): string =
-    while this.index < this.str.len:
-        case this.str[this.index]:
-            of '\45':
-                this.index+=1
-            else:
-                break;
+    while this.index < this.str.len and this.str[this.index]=='\45':
+        this.index+=1
     return this.parse_item_trim_space(not_space)
 
 # 匹配到],并且下一个是空格
