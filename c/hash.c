@@ -145,7 +145,7 @@ tableItem **sort22(table *t)
         if (t->dataArr[i] != NULL)
         {
             data[index] = t->dataArr[i];
-            index++;
+            ++index;
         }
     }
     free(t->dataArr);
@@ -188,7 +188,7 @@ tableItem **sort(table *t)
         if (t->dataArr[i] != NULL)
         {
             data[index] = t->dataArr[i];
-            index++;
+            ++index;
         }
     }
     free(t->dataArr);

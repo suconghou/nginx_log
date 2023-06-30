@@ -62,29 +62,18 @@ private:
     const int len;
     const char *const str;
 
-    int
-    parse_item_trim_space(char *item_value, char_is_match cond)
+    int parse_item_trim_space(char *item_value, const char_is_match cond)
     {
-        unsigned char x, y;
-        while (index < len)
+        while (index < len && str[index] == ' ')
         {
-            x = str[index];
-            if (x == ' ')
-            {
-                index++;
-            }
-            else
-            {
-                break;
-            }
+            ++index;
         }
         int found_start = -1;
         int found_end = -1;
+        unsigned char y = (index > 0) ? str[index - 1] : 0;
         while (index < len)
         {
-            x = str[index];
-            index++;
-            y = index >= 2 ? str[index - 2] : 0;
+            unsigned char x = str[index++];
             if (cond(x, y))
             {
                 found_end = index - 1;
@@ -94,6 +83,7 @@ private:
                 }
                 if (index < len)
                 {
+                    y = x;
                     continue;
                 }
             }
@@ -105,52 +95,36 @@ private:
             const int v_len = found_end - found_start + 1;
             memcpy(item_value, str + found_start, v_len);
             item_value[v_len] = '\0';
-            while (index < len)
+            while (index < len && str[index] == ' ')
             {
-                x = str[index];
-                if (x == ' ')
-                {
-                    index++;
-                }
-                else
-                {
-                    break;
-                }
+                ++index;
             }
             return found_start;
         }
         return found_start;
     }
 
-    int parse_item_wrap_string(char *item_value, const char left = '"', const char right = '"')
+    int parse_item_wrap_string(char *item_value, const char &left = '"', const char &right = '"')
     {
-        while (index < len)
+        while (index < len && str[index] == ' ')
         {
-            if (str[index] == ' ')
-            {
-                index++;
-                continue;
-            }
-            else if (str[index] == left)
-            {
-                index++;
-                auto p = memchr(str + index, right, len - index);
-                if (!p)
-                {
-                    return -1;
-                }
-                const int v_len = (char *)p - str - index;
-                memcpy(item_value, str + index, v_len);
-                item_value[v_len] = '\0';
-                index += v_len + 1;
-                return 1;
-            }
-            else
-            {
-                return -1;
-            }
+            ++index;
         }
-        return -1;
+        if (index >= len || str[index] != left)
+        {
+            return -1;
+        }
+        ++index;
+        auto p = memchr(str + index, right, len - index);
+        if (!p)
+        {
+            return -1;
+        }
+        const int v_len = static_cast<const char *>(p) - str - index;
+        memcpy(item_value, str + index, v_len);
+        item_value[v_len] = '\0';
+        index += v_len + 1;
+        return 1;
     }
 
 public:
@@ -167,7 +141,7 @@ public:
         {
             if (str[index] == '-')
             {
-                index++;
+                ++index;
             }
             else
             {

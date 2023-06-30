@@ -47,31 +47,22 @@ int digital_or_none_end(unsigned char x, unsigned char y)
 // offset 字符串坐标
 int parse_item_trim_space(const char *s, int *offset, const int len, char *item_value, char_is_match cond)
 {
-    unsigned char x, y;
     int i = *offset;
-    while (i < len)
+    while (i < len && s[i] == ' ')
     {
-        x = s[i];
-        if (x == ' ')
-        {
-            i++;
-        }
-        else
-        {
-            break;
-        }
+        i++;
     }
     *offset = i;
     int found_start = -1;
     int found_end = -1;
-
+    unsigned char y = i > 0 ? s[i - 1] : 0;
     while (i < len)
     {
-        x = s[i];
+        unsigned char x = s[i];
         i++;
-        y = i >= 2 ? s[i - 2] : 0;
         if (cond(x, y))
         {
+            y = x;
             found_end = i - 1;
             if (found_start < 0)
             {
@@ -90,17 +81,9 @@ int parse_item_trim_space(const char *s, int *offset, const int len, char *item_
         const int v_len = found_end - found_start + 1;
         memcpy(item_value, s + found_start, v_len);
         item_value[v_len] = '\0';
-        while (i < len)
+        while (i < len && s[i] == ' ')
         {
-            x = s[i];
-            if (x == ' ')
-            {
-                i++;
-            }
-            else
-            {
-                break;
-            }
+            i++;
         }
         *offset = i;
         return found_start;
@@ -111,37 +94,25 @@ int parse_item_trim_space(const char *s, int *offset, const int len, char *item_
 int parse_item_wrap_string(const char *s, int *offset, const int len, char *item_value, const char left, const char right)
 {
     int i = *offset;
-    while (i < len)
+    while (i < len && s[i] == ' ')
     {
-        if (s[i] == ' ')
-        {
-            i++;
-            continue;
-        }
-        else if (s[i] == left)
-        {
-            i++;
-            char *p = memchr(s + i, right, len - i);
-            if (p)
-            {
-                const int v_len = p - s - i;
-                memcpy(item_value, s + i, v_len);
-                item_value[v_len] = '\0';
-                *offset = i + v_len + 1;
-                return 1;
-            }
-            else
-            {
-                break;
-            }
-        }
-        else
-        {
-            break;
-        }
+        i++;
     }
-    *offset = i;
-    return -1;
+    if (i >= len || s[i] != left)
+    {
+        return -1;
+    }
+    i++;
+    char *p = memchr(s + i, right, len - i);
+    if (!p)
+    {
+        return -1;
+    }
+    const int v_len = p - s - i;
+    memcpy(item_value, s + i, v_len);
+    item_value[v_len] = '\0';
+    *offset = i + v_len + 1;
+    return 1;
 }
 
 int parse_remote_addr(const char *s, int *offset, const int len, char *item_value)
