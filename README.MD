@@ -1,8 +1,8 @@
 ## nim 版本
 
 ```
-nim --mm:orc -d:release --passL:-s --passL:-static --opt:speed c main
-nim --mm:arc -d:release --passL:-s --passL:-static --opt:speed c main
+nim --mm:orc --threads:off -d:release --passL:-s --passL:-static --opt:speed c main
+nim --mm:arc --threads:off -d:release --passL:-s --passL:-static --opt:speed c main
 ```
 
 nim 使用 orc, arc 相比其他gc算法速度更快
