@@ -1,8 +1,8 @@
 ## nim 版本
 
 ```
-nim --mm:orc --threads:off -d:release --passL:-s --passL:-static --opt:speed c main
-nim --mm:arc --threads:off -d:release --passL:-s --passL:-static --opt:speed c main
+nim --mm:orc --threads:off --passC:-flto --passL:-flto -d:release --passL:-s --passL:-static --opt:speed c main
+nim --mm:arc --threads:off --passC:-flto --passL:-flto -d:release --passL:-s --passL:-static --opt:speed c main
 ```
 
 nim 使用 orc, arc 相比其他gc算法速度更快
@@ -11,14 +11,14 @@ nim 使用 orc, arc 相比其他gc算法速度更快
 ## c 版本
 
 ```
-gcc -Wall -std=c17 -static-libstdc++ -static-libgcc --static -Wl,-Bstatic,--gc-sections -O3 -ffunction-sections -fdata-sections main.c -o ngx_log
+gcc -Wall -std=c17 -flto=auto -static-libstdc++ -static-libgcc --static -Wl,-Bstatic,--gc-sections -O3 -ffunction-sections -fdata-sections main.c -o ngx_log
 ```
 
 
 ## c++ 版本
 
 ```
-g++ -Wall -std=c++20 -static-libstdc++ -static-libgcc --static -Wl,-Bstatic,--gc-sections -O3 -ffunction-sections -fdata-sections main.cpp -o ngx_log
+g++ -Wall -std=c++20 -flto=auto -static-libstdc++ -static-libgcc --static -Wl,-Bstatic,--gc-sections -O3 -ffunction-sections -fdata-sections main.cpp -o ngx_log
 
 ```
 
