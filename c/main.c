@@ -394,159 +394,89 @@ int main(int argc, char *argv[])
 
     unsigned long total_bytes_sent = 0;
     unsigned int total_lines = 0;
-    char value[8192] = {0};
+    char remote_addr[1024] = {0};
+    char remote_user[1024] = {0};
+    char time_local[1024] = {0};
+    char request_line[8192] = {0};
+    char status_code[32] = {0};
+    char http_referer[4096] = {0};
+    char http_user_agent[4096] = {0};
+    char http_x_forwarded_for[1024] = {0};
 
     while (fgets(s, sizeof s, input) != NULL)
     {
         int offset = 0;
         int len = strlen(s);
 
-        char *remote_addr = NULL;
-        char *remote_user = NULL;
-        char *time_local = NULL;
-        char *request_line = NULL;
-        char *status_code = NULL;
-        char *http_referer = NULL;
-        char *http_user_agent = NULL;
-        char *http_x_forwarded_for = NULL;
-
-        if (parse_remote_addr(s, &offset, len, value) < 0)
+        if (parse_remote_addr(s, &offset, len, remote_addr) < 0)
         {
             goto error_line;
         }
-        remote_addr = malloc(strlen(value) + 1);
-        strcpy(remote_addr, value);
-        if (parse_remote_user(s, &offset, len, value) < 0)
+        if (parse_remote_user(s, &offset, len, remote_user) < 0)
         {
             goto error_line;
         }
-        remote_user = malloc(strlen(value) + 1);
-        strcpy(remote_user, value);
-        if (parse_time_local(s, &offset, len, value) < 0)
+        if (parse_time_local(s, &offset, len, time_local) < 0)
         {
             goto error_line;
         }
-        time_local = malloc(strlen(value) + 1);
-        strcpy(time_local, value);
-        if (parse_request_line(s, &offset, len, value) < 0)
+        if (parse_request_line(s, &offset, len, request_line) < 0)
         {
             goto error_line;
         }
-        request_line = malloc(strlen(value) + 1);
-        strcpy(request_line, value);
-        if (parse_status_code(s, &offset, len, value) < 0)
+        if (parse_status_code(s, &offset, len, status_code) < 0)
         {
             goto error_line;
         }
-        int code_len = strlen(value);
-        if (code_len != 3)
+        if (strlen(status_code) != 3)
         {
             // 状态码必须是三位数字
             goto error_line;
         }
-        status_code = malloc(4);
-        strcpy(status_code, value);
-        if (parse_body_bytes_sent(s, &offset, len, value) < 0)
+        char buf[64] = {0};
+        if (parse_body_bytes_sent(s, &offset, len, buf) < 0)
         {
             goto error_line;
         }
-        int body_bytes_sent = atoi(value);
-        if (parse_http_referer(s, &offset, len, value) < 0)
+        int body_bytes_sent = atoi(buf);
+        if (parse_http_referer(s, &offset, len, http_referer) < 0)
         {
             goto error_line;
         }
-        http_referer = malloc(strlen(value) + 1);
-        strcpy(http_referer, value);
-        if (parse_http_user_agent(s, &offset, len, value) < 0)
+        if (parse_http_user_agent(s, &offset, len, http_user_agent) < 0)
         {
             goto error_line;
         }
-        http_user_agent = malloc(strlen(value) + 1);
-        strcpy(http_user_agent, value);
-        if (parse_http_x_forwarded_for(s, &offset, len, value) < 0)
+        if (parse_http_x_forwarded_for(s, &offset, len, http_x_forwarded_for) < 0)
         {
             goto error_line;
         }
-        http_x_forwarded_for = malloc(strlen(value) + 1);
-        strcpy(http_x_forwarded_for, value);
         // 这一行 所有都已正确解析，插入table中
         total_lines++;
         total_bytes_sent += body_bytes_sent;
 
-        if (incr(remote_addr_data, remote_addr, 1) >= 0)
+        incr(remote_addr_data, remote_addr, 1);
+        incr(remote_user_data, remote_user, 1);
+        incr(time_local_data, time_local, 1);
+        incr(request_line_data, request_line, 1);
+        incr(status_data, status_code, 1);
+        incr(http_referer_data, http_referer, 1);
+        incr(http_user_agent_data, http_user_agent, 1);
+        incr(http_x_forwarded_for_data, http_x_forwarded_for, 1);
+        incr(http_sent_data, request_line, body_bytes_sent);
+        if (strcmp(status_code, "200") != 0)
         {
-            free(remote_addr);
-        }
-        if (incr(remote_user_data, remote_user, 1) >= 0)
-        {
-            free(remote_user);
-        }
-        if (incr(time_local_data, time_local, 1) >= 0)
-        {
-            free(time_local);
-        }
-        if (incr(request_line_data, request_line, 1) >= 0)
-        {
-            if (incr(http_sent_data, request_line, body_bytes_sent) >= 0)
+            const unsigned int status_code_int = atoi(status_code);
+            if (http_bad_code_data[status_code_int] == NULL)
             {
-                if (strcmp(status_code, "200") != 0)
-                {
-                    const unsigned int status_code_int = atoi(status_code);
-                    if (http_bad_code_data[status_code_int] == NULL)
-                    {
-                        http_bad_code_data[status_code_int] = newTable(1024);
-                    }
-                    if (incr(http_bad_code_data[status_code_int], request_line, 1) >= 0)
-                    {
-                        free(request_line);
-                    }
-                }
-                else
-                {
-                    free(request_line);
-                }
+                http_bad_code_data[status_code_int] = newTable(1024);
             }
-        }
-        else
-        {
-            incr(http_sent_data, request_line, body_bytes_sent);
-            if (strcmp(status_code, "200") != 0)
-            {
-                const unsigned int status_code_int = atoi(status_code);
-                if (http_bad_code_data[status_code_int] == NULL)
-                {
-                    http_bad_code_data[status_code_int] = newTable(1024);
-                }
-                incr(http_bad_code_data[status_code_int], request_line, 1);
-            }
-        }
-        if (incr(status_data, status_code, 1) >= 0)
-        {
-            free(status_code);
-        }
-        if (incr(http_referer_data, http_referer, 1) >= 0)
-        {
-            free(http_referer);
-        }
-        if (incr(http_user_agent_data, http_user_agent, 1) >= 0)
-        {
-            free(http_user_agent);
-        }
-        if (incr(http_x_forwarded_for_data, http_x_forwarded_for, 1) >= 0)
-        {
-            free(http_x_forwarded_for);
+            incr(http_bad_code_data[status_code_int], request_line, 1);
         }
         continue;
 
     error_line:
-        free(remote_addr);
-        free(remote_user);
-        free(time_local);
-        free(request_line);
-        free(status_code);
-        free(http_referer);
-        free(http_user_agent);
-        free(http_x_forwarded_for);
+
         fprintf(stderr, "%s", s);
     }
 

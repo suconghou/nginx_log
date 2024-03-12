@@ -7,6 +7,12 @@ nim --mm:arc --threads:off --passC:-flto --passL:-flto -d:release --passL:-s --p
 
 nim 使用 orc, arc 相比其他gc算法速度更快
 
+注意本地测试时也要threads:off,编译出来的性能略有提升
+
+```
+nim --threads:off --mm:arc -d:release --opt:speed c main.nim
+```
+
 
 ## c 版本
 
@@ -38,7 +44,7 @@ c版本速度最快，内存占用也最小，nim与c++版本速度相当，比c
 
 | 版本  | 时间  |
 | ------ | ------   |
-| c     | 2.673s    |
+| c     | 1.932s    |
 | c++   | 6.086s    |
 | nim   | 5.698s    |
 

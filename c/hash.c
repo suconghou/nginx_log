@@ -107,8 +107,9 @@ int incr(table *t, char *key, int n)
         _enlarge(t);
     }
     // 扩容后dataLen将会变化，之前存储的成员都会移动
+    const unsigned long l = strlen(key);
     const unsigned int maxHash = t->dataLen - 1; // 使用异或快速计算的参数，代表插槽数量-1
-    const unsigned int hc = hash(key, strlen(key));
+    const unsigned int hc = hash(key, l);
     unsigned int h = hc & maxHash; // 计算应落到哪个插槽
     while (t->dataArr[h] != NULL)
     {
@@ -125,7 +126,8 @@ int incr(table *t, char *key, int n)
         // 此时我们就新插入这个值到这个插槽
     }
     tableItem *item = malloc(sizeof(tableItem));
-    item->key = key;
+    item->key = malloc(l + 1);
+    strcpy(item->key, key);
     item->value = n;
     item->hcode = hc;
     t->dataArr[h] = item;
