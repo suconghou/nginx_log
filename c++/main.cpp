@@ -324,38 +324,38 @@ int process(istream &fh)
 
     while (fh.getline(str, sizeof(str)))
     {
-        auto a = Line(str);
+        Line a(str);
         if (a.parse_remote_addr(value) < 0)
         {
             cerr << str << endl;
             continue;
         }
-        string remote_addr = value;
+        string remote_addr(value);
         if (a.parse_remote_user(value) < 0)
         {
             cerr << str << endl;
             continue;
         }
-        string remote_user = value;
+        string remote_user(value);
         if (a.parse_time_local(value) < 0)
         {
             cerr << str << endl;
             continue;
         }
-        string time_local = value;
+        string time_local(value);
         if (a.parse_request_line(value) < 0)
         {
             cerr << str << endl;
             continue;
         }
-        string request_line = value;
+        string request_line(value);
 
         if (a.parse_status_code(value) < 0)
         {
             cerr << str << endl;
             continue;
         }
-        string status_code = value;
+        string status_code(value);
 
         if (a.parse_body_bytes_sent(value) < 0)
         {
@@ -369,21 +369,21 @@ int process(istream &fh)
             cerr << str << endl;
             continue;
         }
-        string http_referer = value;
+        string http_referer(value);
 
         if (a.parse_http_user_agent(value) < 0)
         {
             cerr << str << endl;
             continue;
         }
-        string http_user_agent = value;
+        string http_user_agent(value);
 
         if (a.parse_http_x_forwarded_for(value) < 0)
         {
             cerr << str << endl;
             continue;
         }
-        string http_x_forwarded_for = value;
+        string http_x_forwarded_for(value);
 
         // 这一行 所有都已正确解析，插入table中
         total_lines++;
