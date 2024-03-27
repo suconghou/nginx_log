@@ -249,7 +249,7 @@ static inline void byteFormat(unsigned long s, char *out)
     snprintf(out, 32, "%.2f %cB", n, *unit);
 }
 
-intstr *sort_map(strMap &m)
+intstr *sort_map(const strMap &m) noexcept
 {
     int i = 0;
     auto arr = new intstr[m.size()];
@@ -262,14 +262,14 @@ intstr *sort_map(strMap &m)
     return arr;
 }
 
-static inline int cmp(strstrMap a, strstrMap b)
+static inline int cmp(const strstrMap &a, const strstrMap &b) noexcept
 {
     return a.first < b.first;
 }
 
 // pair 默认对first升序，当first相同时对second升序；
 // 我们的second无法比较，需要自定义cmp函数
-strstrMap *sort_strmap(statusMap &m)
+strstrMap *sort_strmap(const statusMap &m) noexcept
 {
     int i = 0;
     auto arr = new strstrMap[m.size()];
