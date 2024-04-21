@@ -253,9 +253,9 @@ intstr *sort_map(const strMap &m) noexcept
 {
     int i = 0;
     auto arr = new intstr[m.size()];
-    for (const auto &it : m)
+    for (const auto &[a, b] : m)
     {
-        arr[i] = make_pair(it.second, it.first);
+        arr[i] = make_pair(b, a);
         i++;
     }
     sort(arr, arr + m.size(), greater<>());
@@ -273,9 +273,9 @@ strstrMap *sort_strmap(const statusMap &m) noexcept
 {
     int i = 0;
     auto arr = new strstrMap[m.size()];
-    for (const auto &it : m)
+    for (const auto &[a, b] : m)
     {
-        arr[i] = make_pair(it.first, it.second);
+        arr[i] = make_pair(a, b);
         i++;
     }
     sort(arr, arr + m.size(), cmp);
