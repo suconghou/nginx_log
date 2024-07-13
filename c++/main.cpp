@@ -252,13 +252,15 @@ static inline void byteFormat(unsigned long s, char *out)
 intstr *sort_map(const strMap &m) noexcept
 {
     int i = 0;
-    auto arr = new intstr[m.size()];
+    int l = m.size();
+    auto arr = new intstr[l];
     for (const auto &[a, b] : m)
     {
         arr[i] = make_pair(b, a);
         i++;
     }
-    sort(arr, arr + m.size(), greater<>());
+    int n = l > 100 ? 100 : l;
+    partial_sort(arr, arr + n, arr + l, greater<>());
     return arr;
 }
 
