@@ -428,8 +428,8 @@ int process(istream &fh)
             {
                 break;
             }
-            const auto u = data[i].second;
-            const auto num = data[i].first;
+            const auto &u = data[i].second;
+            const auto &num = data[i].first;
             printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, ((double)num / (double)total_lines) * 100);
             n += num;
         }
@@ -452,8 +452,8 @@ int process(istream &fh)
             {
                 break;
             }
-            const auto u = data[i].second;
-            const auto num = data[i].first;
+            const auto &u = data[i].second;
+            const auto &num = data[i].first;
             byteFormat(num, value);
             printf(("%-" + max_width_str + ".*s %12s %.2f%%\n").c_str(), max_width, u.c_str(), value, ((double)num / (double)total_bytes_sent) * 100);
             n += num;
@@ -485,8 +485,8 @@ int process(istream &fh)
             {
                 break;
             }
-            const auto u = data[i].second;
-            const auto num = data[i].first;
+            const auto &u = data[i].second;
+            const auto &num = data[i].first;
             printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, ((double)num / (double)count) * 100);
             n += num;
         }
