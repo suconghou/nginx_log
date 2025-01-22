@@ -10,12 +10,10 @@
 #include <sys/ioctl.h> // ioctl() and TIOCGWINSZ
 #include <unistd.h>    // for STDOUT_FILENO
 
-using namespace std;
-
-typedef unordered_map<string, int> strMap;
-typedef unordered_map<string, strMap> statusMap;
-typedef pair<int, string> intstr;
-typedef pair<string, strMap> strstrMap;
+typedef std::unordered_map<std::string, int> strMap;
+typedef std::unordered_map<std::string, strMap> statusMap;
+typedef std::pair<int, std::string> intstr;
+typedef std::pair<std::string, strMap> strstrMap;
 
 typedef bool (*char_is_match)(unsigned char x, unsigned char y);
 
@@ -256,11 +254,11 @@ intstr *sort_map(const strMap &m) noexcept
     auto arr = new intstr[l];
     for (const auto &[a, b] : m)
     {
-        arr[i] = make_pair(b, a);
+        arr[i] = std::make_pair(b, a);
         i++;
     }
     int n = l > 100 ? 100 : l;
-    partial_sort(arr, arr + n, arr + l, greater<>());
+    std::partial_sort(arr, arr + n, arr + l, std::greater<>());
     return arr;
 }
 
@@ -277,10 +275,10 @@ strstrMap *sort_strmap(const statusMap &m) noexcept
     auto arr = new strstrMap[m.size()];
     for (const auto &[a, b] : m)
     {
-        arr[i] = make_pair(a, b);
+        arr[i] = std::make_pair(a, b);
         i++;
     }
-    sort(arr, arr + m.size(), cmp);
+    std::sort(arr, arr + m.size(), cmp);
     return arr;
 }
 
@@ -298,7 +296,7 @@ int get_width()
     return size.ws_col;
 }
 
-int process(istream &fh)
+int process(std::istream &fh)
 {
     char str[8192] = {0};
     char value[8192] = {0}; // 后面多处使用此内存池复用
@@ -330,63 +328,63 @@ int process(istream &fh)
         Line a(str);
         if (a.parse_remote_addr(value) < 0)
         {
-            cerr << str << endl;
+            std::cerr << str << std::endl;
             continue;
         }
-        string remote_addr(value);
+        std::string remote_addr(value);
         if (a.parse_remote_user(value) < 0)
         {
-            cerr << str << endl;
+            std::cerr << str << std::endl;
             continue;
         }
-        string remote_user(value);
+        std::string remote_user(value);
         if (a.parse_time_local(value) < 0)
         {
-            cerr << str << endl;
+            std::cerr << str << std::endl;
             continue;
         }
-        string time_local(value);
+        std::string time_local(value);
         if (a.parse_request_line(value) < 0)
         {
-            cerr << str << endl;
+            std::cerr << str << std::endl;
             continue;
         }
-        string request_line(value);
+        std::string request_line(value);
 
         if (a.parse_status_code(value) < 0)
         {
-            cerr << str << endl;
+            std::cerr << str << std::endl;
             continue;
         }
-        string status_code(value);
+        std::string status_code(value);
 
         if (a.parse_body_bytes_sent(value) < 0)
         {
-            cerr << str << endl;
+            std::cerr << str << std::endl;
             continue;
         }
         int body_bytes_sent = atoi(value);
 
         if (a.parse_http_referer(value) < 0)
         {
-            cerr << str << endl;
+            std::cerr << str << std::endl;
             continue;
         }
-        string http_referer(value);
+        std::string http_referer(value);
 
         if (a.parse_http_user_agent(value) < 0)
         {
-            cerr << str << endl;
+            std::cerr << str << std::endl;
             continue;
         }
-        string http_user_agent(value);
+        std::string http_user_agent(value);
 
         if (a.parse_http_x_forwarded_for(value) < 0)
         {
-            cerr << str << endl;
+            std::cerr << str << std::endl;
             continue;
         }
-        string http_x_forwarded_for(value);
+        std::string http_x_forwarded_for(value);
 
         // 这一行 所有都已正确解析，插入table中
         total_lines++;
@@ -415,11 +413,11 @@ int process(istream &fh)
     }
     const int t_width = get_width() - 16;
     const unsigned int limit = 100;
-    const auto t_width_str = to_string(t_width);
+    const auto t_width_str = std::to_string(t_width);
 
-    auto print_stat_long = [&](const string &name, strMap &m)
+    auto print_stat_long = [&](const std::string &name, strMap &m)
     {
-        cout << "\n\e[1;34m" << name << "\e[00m" << endl;
+        std::cout << "\n\e[1;34m" << name << "\e[00m" << std::endl;
         const auto data = sort_map(m);
         int n = 0;
         for (unsigned int i = 0; i < m.size(); i++)
@@ -439,13 +437,13 @@ int process(istream &fh)
         m.clear();
     };
 
-    auto print_sent_long = [&](const string &name, strMap &m)
+    auto print_sent_long = [&](const std::string &name, strMap &m)
     {
-        cout << "\n\e[1;34m" << name << "\e[00m" << endl;
+        std::cout << "\n\e[1;34m" << name << "\e[00m" << std::endl;
         const auto data = sort_map(m);
         int n = 0;
         const int max_width = t_width - 6;
-        const string max_width_str = to_string(max_width);
+        const std::string max_width_str = std::to_string(max_width);
         for (unsigned int i = 0; i < m.size(); i++)
         {
             if (i >= limit)
@@ -468,7 +466,7 @@ int process(istream &fh)
         m.clear();
     };
 
-    auto print_code_long = [&](const string &name, strMap &m)
+    auto print_code_long = [&](const std::string &name, strMap &m)
     {
         const auto data = sort_map(m);
         int count = 0;
@@ -477,7 +475,7 @@ int process(istream &fh)
             count += data[i].first;
         }
         snprintf(value, sizeof(value), "%.2f", (double)(count * 100) / (double)total_lines);
-        cout << "\n\e[1;34m状态码" << name << ",共" << count << "次,占比" << value << "%\e[00m" << endl;
+        std::cout << "\n\e[1;34m状态码" << name << ",共" << count << "次,占比" << value << "%\e[00m" << std::endl;
         int n = 0;
         for (unsigned int i = 0; i < m.size(); i++)
         {
@@ -528,11 +526,11 @@ int main(int argc, char *argv[])
 {
     if (argc < 2)
     {
-        return process(cin);
+        return process(std::cin);
     }
     // ifstream是输入文件流（input file stream）的简称, std::ifstream
     // 离开作用域后，fh文件将被析构器自动关闭
-    ifstream fh(argv[1]); // 打开一个文件
+    std::ifstream fh(argv[1]); // 打开一个文件
     if (!fh)
     {
         // open file failed
