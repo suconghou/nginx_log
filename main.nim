@@ -1,6 +1,6 @@
 
 
-import os, tables, sets, strformat, strutils, terminal
+import os, tables, sets, strformat, strutils, terminal, heapqueue
 
 
 type Line = object
@@ -154,7 +154,20 @@ proc parse_upstream_connect_time(this: var Line): string =
 proc parse_upstream_header_time(this: var Line): string =
     return this.parse_item_trim_space(digital_dot_minus)
 
-
+proc topK*[T](ct: CountTable[T], k: int): seq[(int, T)] =
+    if k > 0:
+        var h = initHeapQueue[(int, T)]()
+        for key, count in ct.pairs:
+            if h.len < k:
+                h.push((count, key))
+            elif count > h[0][0]:
+                discard h.pop()
+                h.push((count, key))
+        result = newSeq[(int, T)](h.len)
+        var i = h.len - 1
+        while h.len > 0:
+            result[i] = h.pop()
+            i -= 1
 
 proc process(filename: File|string) =
     var remote_addr_data = newCountTable[string](8192);
@@ -219,51 +232,36 @@ proc process(filename: File|string) =
     let total_bytes = total_bytes_sent.float
 
     proc print_stat_long(name: string, data: ref CountTable[string]) =
-        data.sort()
         echo &"\n\e[1;34m{name}\e[00m"
-        var i = 0;
         var n = 0;
-        for u, num in data:
+        for (num, u) in data[].topK(limit):
             var stru = if u.len < t_width: u.alignLeft(t_width) else: u.substr(0, t_width-1)
             echo fmt"{stru} {num:>6.6} {num.float*100/lines:.2f}%"
-            i+=1
             n+=num
-            if i >= limit:
-                break
         let part1 = (fmt"{n}/{total_lines}").alignLeft(t_width)
         echo &"前{limit}项占比\n{part1} {data.len:6.6} {n.float*100/lines:.2f}%\n"
 
     proc print_sent_long(name: string, data: ref CountTable[string]) =
-        data.sort()
         echo &"\n\e[1;34m{name}\e[00m"
-        var i = 0;
         var n = 0;
         let max_width = t_width - 6
-        for u, num in data:
+        for (num, u) in data[].topK(limit):
             var stru = if u.len < max_width: u.alignLeft(max_width) else: u.substr(0, max_width-1)
             echo fmt"{stru} {formatSize(num,prefix = bpColloquial, includeSpace = true):>12.12} {num.float*100/total_bytes:.2f}%"
-            i+=1
             n+=num
-            if i >= limit:
-                break
         let part1 = (fmt"{formatSize(n,prefix = bpColloquial, includeSpace = true)}/{formatSize(total_bytes_sent.int64,prefix = bpColloquial, includeSpace = true)}").alignLeft(max_width)
         echo &"前{limit}项占比\n{part1} {data.len:12.12} {n.float*100/total_bytes:.2f}%\n"
 
     proc print_code_long(code: string, data: ref CountTable[string]) =
-        data.sort()
         var count = 0;
         for n in data.values:
             count+=n
         echo &"\n\e[1;34m状态码{code},共{count}次,占比{(count*100).float/lines:.2f}%\e[00m"
-        var i = 0;
         var n = 0;
-        for u, num in data:
+        for (num, u) in data[].topK(limit):
             var stru = if u.len < t_width: u.alignLeft(t_width) else: u.substr(0, t_width-1)
             echo fmt"{stru} {num:>6.6} {num.float*100/count.float:.2f}%"
-            i+=1
             n+=num
-            if i >= limit:
-                break
         let part1 = (fmt"{n}/{count}").alignLeft(t_width)
         echo &"前{limit}项占比\n{part1} {data.len:6.6} {n.float*100/count.float:.2f}%\n"
 
