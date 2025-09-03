@@ -12,7 +12,6 @@
 
 typedef std::unordered_map<std::string, int> strMap;
 typedef std::unordered_map<std::string, strMap> statusMap;
-typedef std::pair<int, std::string> intstr;
 typedef std::pair<std::string, strMap> strstrMap;
 
 typedef bool (*char_is_match)(unsigned char x, unsigned char y);
@@ -245,20 +244,39 @@ static inline void byteFormat(unsigned long s, char *out)
     }
     snprintf(out, 32, "%.2f %cB", n, *unit);
 }
-
-intstr *sort_map(const strMap &m) noexcept
+using P = std::pair<int, std::string_view>;
+std::vector<P> top_k(const strMap &m, size_t K) noexcept
 {
-    int i = 0;
-    int l = m.size();
-    auto arr = new intstr[l];
-    for (const auto &[a, b] : m)
+    if (K == 0)
     {
-        arr[i] = std::make_pair(b, a);
-        i++;
+        return {};
     }
-    int n = l > 100 ? 100 : l;
-    std::partial_sort(arr, arr + n, arr + l, std::greater<>());
-    return arr;
+    auto compare = [](const P &a, const P &b)
+    {
+        return a.first > b.first;
+    };
+    std::priority_queue<P, std::vector<P>, decltype(compare)> min_heap(compare);
+    for (const auto &kv : m)
+    {
+        if (min_heap.size() < K)
+        {
+            min_heap.push({kv.second, kv.first});
+        }
+        else if (kv.second > min_heap.top().first)
+        {
+            min_heap.pop();
+            min_heap.push({kv.second, kv.first});
+        }
+    }
+    const size_t result_size = min_heap.size();
+    std::vector<P> result(result_size);
+    size_t index = result_size;
+    while (!min_heap.empty())
+    {
+        result[--index] = min_heap.top();
+        min_heap.pop();
+    }
+    return result;
 }
 
 static inline int cmp(const strstrMap &a, const strstrMap &b) noexcept
@@ -417,42 +435,29 @@ int process(std::istream &fh)
     auto print_stat_long = [&](const std::string &name, strMap &m)
     {
         std::cout << "\n\e[1;34m" << name << "\e[00m" << std::endl;
-        const auto data = sort_map(m);
+        const auto data = top_k(m, limit);
         int n = 0;
-        for (unsigned int i = 0; i < m.size(); i++)
+        for (const auto &[num, u] : data)
         {
-            if (i >= limit)
-            {
-                break;
-            }
-            const auto &u = data[i].second;
-            const auto &num = data[i].first;
-            printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, ((double)num / (double)total_lines) * 100);
+            printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.data(), num, ((double)num / (double)total_lines) * 100);
             n += num;
         }
         snprintf(value, sizeof(value), "%d/%d", n, total_lines);
         printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, m.size(), ((double)n / (double)total_lines) * 100);
-        delete[] data;
         m.clear();
     };
 
     auto print_sent_long = [&](const std::string &name, strMap &m)
     {
         std::cout << "\n\e[1;34m" << name << "\e[00m" << std::endl;
-        const auto data = sort_map(m);
+        const auto data = top_k(m, limit);
         int n = 0;
         const int max_width = t_width - 6;
         const std::string max_width_str = std::to_string(max_width);
-        for (unsigned int i = 0; i < m.size(); i++)
+        for (const auto &[num, u] : data)
         {
-            if (i >= limit)
-            {
-                break;
-            }
-            const auto &u = data[i].second;
-            const auto &num = data[i].first;
             byteFormat(num, value);
-            printf(("%-" + max_width_str + ".*s %12s %.2f%%\n").c_str(), max_width, u.c_str(), value, ((double)num / (double)total_bytes_sent) * 100);
+            printf(("%-" + max_width_str + ".*s %12s %.2f%%\n").c_str(), max_width, u.data(), value, ((double)num / (double)total_bytes_sent) * 100);
             n += num;
         }
         char b1[128] = {0};
@@ -461,35 +466,27 @@ int process(std::istream &fh)
         byteFormat(total_bytes_sent, b2);
         snprintf(value, sizeof(value), "%s/%s", b1, b2);
         printf(("前%d项占比\n%-" + max_width_str + "s %12d %.2f%%\n\n").c_str(), limit, value, m.size(), ((double)n / (double)total_bytes_sent) * 100);
-        delete[] data;
         m.clear();
     };
 
     auto print_code_long = [&](const std::string &name, strMap &m)
     {
-        const auto data = sort_map(m);
         int count = 0;
-        for (unsigned int i = 0; i < m.size(); i++)
+        for (const auto &pair : m)
         {
-            count += data[i].first;
+            count += pair.second;
         }
+        const auto data = top_k(m, limit);
         snprintf(value, sizeof(value), "%.2f", (double)(count * 100) / (double)total_lines);
         std::cout << "\n\e[1;34m状态码" << name << ",共" << count << "次,占比" << value << "%\e[00m" << std::endl;
         int n = 0;
-        for (unsigned int i = 0; i < m.size(); i++)
+        for (const auto &[num, u] : data)
         {
-            if (i >= limit)
-            {
-                break;
-            }
-            const auto &u = data[i].second;
-            const auto &num = data[i].first;
-            printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.c_str(), num, ((double)num / (double)count) * 100);
+            printf(("%-" + t_width_str + ".*s %6d %.2f%%\n").c_str(), t_width, u.data(), num, ((double)num / (double)count) * 100);
             n += num;
         }
         snprintf(value, sizeof(value), "%d/%d", n, count);
         printf(("前%d项占比\n%-" + t_width_str + "s %6d %.2f%%\n\n").c_str(), limit, value, m.size(), ((double)n / (double)count) * 100);
-        delete[] data;
         m.clear();
     };
 
