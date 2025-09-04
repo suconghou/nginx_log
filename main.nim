@@ -161,8 +161,7 @@ proc topK*[T](ct: CountTable[T], k: int): seq[(int, T)] =
             if h.len < k:
                 h.push((count, key))
             elif count > h[0][0]:
-                discard h.pop()
-                h.push((count, key))
+                discard h.replace((count, key))
         result = newSeq[(int, T)](h.len)
         var i = h.len - 1
         while h.len > 0:
