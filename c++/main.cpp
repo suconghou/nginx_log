@@ -1,5 +1,9 @@
 #include <string>
 #include <cstring>
+#include <string_view>
+#include <optional>
+#include <charconv>
+#include <cstdio>
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -10,11 +14,19 @@
 #include <sys/ioctl.h> // ioctl() and TIOCGWINSZ
 #include <unistd.h>    // for STDOUT_FILENO
 
-typedef std::unordered_map<std::string, int> strMap;
-typedef std::unordered_map<std::string, strMap> statusMap;
-typedef std::pair<std::string, strMap> strstrMap;
+// 透明哈希：允许用 string_view 直接查找，避免每行构造 std::string 临时对象
+struct str_hash
+{
+    using is_transparent = void;
+    std::size_t operator()(std::string_view sv) const noexcept
+    {
+        return std::hash<std::string_view>{}(sv);
+    }
+};
+using strMap = std::unordered_map<std::string, int, str_hash, std::equal_to<>>;
+using statusMap = std::unordered_map<int, strMap>;
 
-typedef bool (*char_is_match)(unsigned char x, unsigned char y);
+typedef std::pair<int, std::string_view> P;
 
 // 仅数字
 bool digital(unsigned char x, unsigned char y)
@@ -55,175 +67,186 @@ bool digital_or_none_end(unsigned char x, unsigned char y)
 class Line
 {
 private:
-    const char *ptr;       // 当前处理位置的指针
-    const char *const str; // 字符串起始位置
-    const char *const end; // 字符串结束位置的指针
+    std::string_view data;  // 存储整个字符串视图
+    size_t current_pos = 0; // 当前处理位置
 
-    int parse_item_trim_space(char *item_value, const char_is_match cond)
+    template <auto cond>
+    std::optional<std::string_view> parse_item_trim_space()
     {
-        while (ptr < end && *ptr == ' ')
+        while (current_pos < data.size() && data[current_pos] == ' ')
         {
-            ++ptr;
+            ++current_pos;
         }
-        const char *found_start = nullptr;
-        const char *found_end = nullptr;
-        unsigned char y = (ptr > str) ? *(ptr - 1) : 0;
-        while (ptr < end)
+        int found_start = -1;
+        int found_end = -1;
+        unsigned char y = (current_pos > 0) ? data[current_pos - 1] : 0;
+        while (current_pos < data.size())
         {
-            unsigned char x = *ptr++;
-            if (cond(x, y))
+            unsigned char x = data[current_pos++];
+            if (cond(x, y)) [[likely]]
             {
-                found_end = ptr - 1;
-                if (!found_start)
+                found_end = current_pos - 1;
+                if (found_start < 0)
                 {
                     found_start = found_end;
                 }
-                if (ptr < end)
+                if (current_pos < data.size()) [[likely]]
                 {
                     y = x;
                     continue;
                 }
             }
-            if (!found_start)
+            if (found_start < 0) [[unlikely]]
             {
-                return -1;
+                return std::nullopt;
             }
-            // cond成立时,则包含当前字符x，否则不包含，截取的字符最少1字节
-            const int v_len = found_end - found_start + 1;
-            memcpy(item_value, found_start, v_len);
-            item_value[v_len] = '\0';
-            while (ptr < end && *ptr == ' ')
+            while (current_pos < data.size() && data[current_pos] == ' ')
             {
-                ++ptr;
+                ++current_pos;
             }
-            return found_start - str;
+            return data.substr(found_start, found_end - found_start + 1);
         }
-        return found_start ? (found_start - str) : -1;
+        if (found_start >= 0)
+        {
+            return data.substr(found_start, found_end - found_start + 1);
+        }
+        return std::nullopt;
     }
 
-    int parse_item_wrap_string(char *item_value, const char &left = '"', const char &right = '"')
+    std::optional<std::string_view> parse_item_wrap_string(char left = '"', char right = '"')
     {
-        while (ptr < end && *ptr == ' ')
+        while (current_pos < data.size() && data[current_pos] == ' ')
         {
-            ++ptr;
+            ++current_pos;
         }
-        if (ptr >= end || *ptr != left)
+        if (current_pos >= data.size() || data[current_pos] != left) [[unlikely]]
         {
-            return -1;
+            return std::nullopt;
         }
-        ++ptr;
-        const char *p = static_cast<const char *>(memchr(ptr, right, end - ptr));
-        if (!p)
+        ++current_pos;
+        int start_pos = current_pos;
+        size_t end_pos = data.find(right, current_pos);
+        if (end_pos == std::string_view::npos) [[unlikely]]
         {
-            return -1;
+            return std::nullopt;
         }
-        const int v_len = p - ptr;
-        memcpy(item_value, ptr, v_len);
-        item_value[v_len] = '\0';
-        ptr = p + 1;
-        return 1;
+        current_pos = end_pos + 1;
+        return data.substr(start_pos, end_pos - start_pos);
     }
 
 public:
-    Line(char const *str);
+    explicit Line(std::string_view sv) : data(sv), current_pos(0) {}
 
-    int parse_remote_addr(char *item_value)
+    std::optional<std::string_view> parse_remote_addr()
     {
-        return parse_item_trim_space(item_value, digital_dot_colon);
+        return parse_item_trim_space<digital_dot_colon>();
     }
 
-    int parse_remote_user(char *item_value)
+    std::optional<std::string_view> parse_remote_user()
     {
-        while (ptr < end && *ptr == '-')
+        while (current_pos < data.size() && data[current_pos] == '-')
         {
-            ++ptr;
+            ++current_pos;
         }
-        return parse_item_trim_space(item_value, not_space);
+        return parse_item_trim_space<not_space>();
     }
 
-    int parse_time_local(char *item_value)
+    std::optional<std::string_view> parse_time_local()
     {
-        return parse_item_wrap_string(item_value, '[', ']');
+        return parse_item_wrap_string('[', ']');
     }
 
-    int parse_request_line(char *item_value)
+    std::optional<std::string_view> parse_request_line()
     {
-        return parse_item_wrap_string(item_value);
+        return parse_item_wrap_string();
     }
 
-    int parse_status_code(char *item_value)
+    std::optional<std::string_view> parse_status_code()
     {
-        return parse_item_trim_space(item_value, digital);
+        return parse_item_trim_space<digital>();
     }
 
-    int parse_body_bytes_sent(char *item_value)
+    std::optional<std::string_view> parse_body_bytes_sent()
     {
-        return parse_item_trim_space(item_value, digital);
+        return parse_item_trim_space<digital>();
     }
 
-    int parse_http_referer(char *item_value)
+    std::optional<std::string_view> parse_http_referer()
     {
-        return parse_item_wrap_string(item_value);
+        return parse_item_wrap_string();
     }
 
-    int parse_http_user_agent(char *item_value)
+    std::optional<std::string_view> parse_http_user_agent()
     {
-        return parse_item_wrap_string(item_value);
+        return parse_item_wrap_string();
     }
 
-    int parse_http_x_forwarded_for(char *item_value)
+    std::optional<std::string_view> parse_http_x_forwarded_for()
     {
-        return parse_item_wrap_string(item_value);
+        return parse_item_wrap_string();
     }
 
-    int parse_host(char *item_value)
+    std::optional<std::string_view> parse_host()
     {
-        return parse_item_trim_space(item_value, not_space);
+        return parse_item_trim_space<not_space>();
     }
 
-    int parse_request_length(char *item_value)
+    std::optional<std::string_view> parse_request_length()
     {
-        return parse_item_trim_space(item_value, digital);
+        return parse_item_trim_space<digital>();
     }
 
-    int parse_bytes_sent(char *item_value)
+    std::optional<std::string_view> parse_bytes_sent()
     {
-        return parse_item_trim_space(item_value, digital);
+        return parse_item_trim_space<digital>();
     }
 
-    int parse_upstream_addr(char *item_value)
+    std::optional<std::string_view> parse_upstream_addr()
     {
-        return parse_item_trim_space(item_value, not_space);
+        return parse_item_trim_space<not_space>();
     }
 
-    int parse_upstream_status(char *item_value)
+    std::optional<std::string_view> parse_upstream_status()
     {
-        return parse_item_trim_space(item_value, digital_or_none_end);
+        return parse_item_trim_space<digital_or_none_end>();
     }
 
-    int parse_request_time(char *item_value)
+    std::optional<std::string_view> parse_request_time()
     {
-        return parse_item_trim_space(item_value, digital_dot);
+        return parse_item_trim_space<digital_dot>();
     }
 
-    int parse_upstream_response_time(char *item_value)
+    std::optional<std::string_view> parse_upstream_response_time()
     {
-        return parse_item_trim_space(item_value, digital_dot_minus);
+        return parse_item_trim_space<digital_dot_minus>();
     }
 
-    int parse_upstream_connect_time(char *item_value)
+    std::optional<std::string_view> parse_upstream_connect_time()
     {
-        return parse_item_trim_space(item_value, digital_dot_minus);
+        return parse_item_trim_space<digital_dot_minus>();
     }
 
-    int parse_upstream_header_time(char *item_value)
+    std::optional<std::string_view> parse_upstream_header_time()
     {
-        return parse_item_trim_space(item_value, digital_dot_minus);
+        return parse_item_trim_space<digital_dot_minus>();
     }
 };
 
-Line::Line(const char *const line) : ptr(line), str(line), end(line + strlen(line))
+static inline int sv_to_int(std::string_view sv)
 {
+    int result = 0;
+    std::from_chars(sv.data(), sv.data() + sv.size(), result);
+    return result;
+}
+
+static inline void bump(strMap &m, std::string_view key, int delta = 1)
+{
+    auto it = m.find(key);
+    if (it == m.end())
+    {
+        it = m.emplace(std::string(key), 0).first;
+    }
+    it->second += delta;
 }
 
 // out 空间至少有32字节
@@ -244,7 +267,7 @@ static inline void byteFormat(unsigned long s, char *out)
     }
     snprintf(out, 32, "%.2f %cB", n, *unit);
 }
-using P = std::pair<int, std::string_view>;
+
 std::vector<P> top_k(const strMap &m, size_t K) noexcept
 {
     if (K == 0)
@@ -279,29 +302,9 @@ std::vector<P> top_k(const strMap &m, size_t K) noexcept
     return result;
 }
 
-static inline int cmp(const strstrMap &a, const strstrMap &b) noexcept
-{
-    return a.first < b.first;
-}
-
-// pair 默认对first升序，当first相同时对second升序；
-// 我们的second无法比较，需要自定义cmp函数
-strstrMap *sort_strmap(const statusMap &m) noexcept
-{
-    int i = 0;
-    auto arr = new strstrMap[m.size()];
-    for (const auto &[a, b] : m)
-    {
-        arr[i] = std::make_pair(a, b);
-        i++;
-    }
-    std::sort(arr, arr + m.size(), cmp);
-    return arr;
-}
-
 int get_width()
 {
-    struct winsize size;
+    struct winsize size = {0, 0, 0, 0};
     char fds[3] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
     for (unsigned int fd = 0; fd < sizeof(fds) / sizeof(fds[0]); fd++)
     {
@@ -313,7 +316,7 @@ int get_width()
     return size.ws_col;
 }
 
-int process(std::istream &fh)
+int process(FILE *fh)
 {
     char str[8192] = {0};
     char value[8192] = {0}; // 后面多处使用此内存池复用
@@ -340,85 +343,81 @@ int process(std::istream &fh)
     http_sent_data.reserve(16384);
     statusMap http_bad_code_data;
 
-    while (fh.getline(str, sizeof(str)))
+    while (fgets(str, sizeof(str), fh))
     {
-        Line a(str);
-        if (a.parse_remote_addr(value) < 0)
+        Line a{std::string_view(str)};
+        auto remote_addr = a.parse_remote_addr();
+        if (!remote_addr)
         {
             std::cerr << str << std::endl;
             continue;
         }
-        std::string remote_addr(value);
-        if (a.parse_remote_user(value) < 0)
+        auto remote_user = a.parse_remote_user();
+        if (!remote_user)
         {
             std::cerr << str << std::endl;
             continue;
         }
-        std::string remote_user(value);
-        if (a.parse_time_local(value) < 0)
+        auto time_local = a.parse_time_local();
+        if (!time_local)
         {
             std::cerr << str << std::endl;
             continue;
         }
-        std::string time_local(value);
-        if (a.parse_request_line(value) < 0)
+        auto request_line = a.parse_request_line();
+        if (!request_line)
         {
             std::cerr << str << std::endl;
             continue;
         }
-        std::string request_line(value);
+        auto status_code = a.parse_status_code();
+        if (!status_code)
+        {
+            std::cerr << str << std::endl;
+            continue;
+        }
+        auto body_bytes_sent_sv = a.parse_body_bytes_sent();
+        if (!body_bytes_sent_sv)
+        {
+            std::cerr << str << std::endl;
+            continue;
+        }
+        int body_bytes_sent = sv_to_int(*body_bytes_sent_sv);
+        auto http_referer = a.parse_http_referer();
+        if (!http_referer)
+        {
+            std::cerr << str << std::endl;
+            continue;
+        }
+        auto http_user_agent = a.parse_http_user_agent();
+        if (!http_user_agent)
+        {
+            std::cerr << str << std::endl;
+            continue;
+        }
+        auto http_x_forwarded_for = a.parse_http_x_forwarded_for();
+        if (!http_x_forwarded_for)
+        {
+            std::cerr << str << std::endl;
+            continue;
+        }
 
-        if (a.parse_status_code(value) < 0)
-        {
-            std::cerr << str << std::endl;
-            continue;
-        }
-        std::string status_code(value);
-
-        if (a.parse_body_bytes_sent(value) < 0)
-        {
-            std::cerr << str << std::endl;
-            continue;
-        }
-        int body_bytes_sent = atoi(value);
-
-        if (a.parse_http_referer(value) < 0)
-        {
-            std::cerr << str << std::endl;
-            continue;
-        }
-        std::string http_referer(value);
-
-        if (a.parse_http_user_agent(value) < 0)
-        {
-            std::cerr << str << std::endl;
-            continue;
-        }
-        std::string http_user_agent(value);
-
-        if (a.parse_http_x_forwarded_for(value) < 0)
-        {
-            std::cerr << str << std::endl;
-            continue;
-        }
-        std::string http_x_forwarded_for(value);
-
-        // 这一行 所有都已正确解析，插入table中
+        // 这一行 所有都已正确解析
         total_lines++;
         total_bytes_sent += body_bytes_sent;
 
-        remote_addr_data[remote_addr] += 1;
-        remote_user_data[remote_user] += 1;
-        time_local_data[time_local] += 1;
-        request_line_data[request_line] += 1;
-        status_data[status_code] += 1;
-        http_referer_data[http_referer] += 1;
-        http_user_agent_data[http_user_agent] += 1;
-        http_x_forwarded_for_data[http_x_forwarded_for] += 1;
-        http_sent_data[request_line] += body_bytes_sent;
-        if (status_code != "200")
+        bump(remote_addr_data, *remote_addr);
+        bump(remote_user_data, *remote_user);
+        bump(time_local_data, *time_local);
+        bump(request_line_data, *request_line);
+        bump(status_data, *status_code);
+        bump(http_referer_data, *http_referer);
+        bump(http_user_agent_data, *http_user_agent);
+        bump(http_x_forwarded_for_data, *http_x_forwarded_for);
+        bump(http_sent_data, *request_line, body_bytes_sent);
+        if (*status_code != "200")
         {
-            http_bad_code_data[status_code][request_line] += 1;
+            bump(http_bad_code_data[sv_to_int(*status_code)], *request_line);
         }
     }
     byteFormat(total_bytes_sent, value);
@@ -469,7 +468,7 @@ int process(std::istream &fh)
         m.clear();
     };
 
-    auto print_code_long = [&](const std::string &name, strMap &m)
+    auto print_code_long = [&](int code, strMap &m)
     {
         int count = 0;
         for (const auto &pair : m)
@@ -478,7 +477,7 @@ int process(std::istream &fh)
         }
         const auto data = top_k(m, limit);
         snprintf(value, sizeof(value), "%.2f", (double)(count * 100) / (double)total_lines);
-        std::cout << "\n\e[1;34m状态码" << name << ",共" << count << "次,占比" << value << "%\e[00m" << std::endl;
+        std::cout << "\n\e[1;34m状态码" << code << ",共" << count << "次,占比" << value << "%\e[00m" << std::endl;
         int n = 0;
         for (const auto &[num, u] : data)
         {
@@ -508,13 +507,18 @@ int process(std::istream &fh)
 
     print_sent_long("HTTP流量占比统计", http_sent_data);
 
-    // 非200状态码
-    const auto http_bad_code_data_sort = sort_strmap(http_bad_code_data);
-    for (unsigned int i = 0; i < http_bad_code_data.size(); i++)
+    // 非200状态码，按状态码数值升序
+    std::vector<std::pair<int, strMap *>> bad_vec;
+    for (auto &[code, m] : http_bad_code_data)
     {
-        print_code_long(http_bad_code_data_sort[i].first, http_bad_code_data_sort[i].second);
+        bad_vec.emplace_back(code, &m);
     }
-    delete[] http_bad_code_data_sort;
+    std::sort(bad_vec.begin(), bad_vec.end(), [](const auto &a, const auto &b)
+              { return a.first < b.first; });
+    for (auto &[code, m] : bad_vec)
+    {
+        print_code_long(code, *m);
+    }
     return 0;
 }
 
@@ -522,18 +526,13 @@ int main(int argc, char *argv[])
 {
     if (argc < 2)
     {
-        return process(std::cin);
+        return process(stdin);
     }
-    // ifstream是输入文件流（input file stream）的简称, std::ifstream
-    // 离开作用域后，fh文件将被析构器自动关闭
-    std::ifstream fh(argv[1]); // 打开一个文件
+    FILE *fh = fopen(argv[1], "r");
     if (!fh)
     {
-        // open file failed
         perror(argv[1]);
         return 1;
     }
-    char buf[81920];
-    fh.rdbuf()->pubsetbuf(buf, sizeof(buf));
     return process(fh);
 }

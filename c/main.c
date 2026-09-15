@@ -231,7 +231,7 @@ static inline void byteFormat(const unsigned long s, char *out)
 
 static unsigned int get_width()
 {
-    struct winsize size;
+    struct winsize size = {0, 0, 0, 0};
     char fds[3] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
     for (int fd = 0; fd < sizeof(fds) / sizeof(fds[0]); fd++)
     {
