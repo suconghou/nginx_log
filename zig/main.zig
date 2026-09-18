@@ -116,19 +116,21 @@ const Table = struct {
             std.mem.eql(u8, s.key_ptr.?[0..s.key_len], key);
     }
 
-    fn incrH(self: *Table, key: []const u8, hc: u32, n: u64) void {
+    // 返回该 key 最终所在的槽位索引 (供 last-slot 快路径缓存复用)
+    fn incrH(self: *Table, key: []const u8, hc: u32, n: u64) usize {
         if (self.arr.len * 2 < (self.count + 1) * 3) self.enlarge();
         const m = self.arr.len - 1;
         var h = hc & m;
         while (self.arr[h].key_ptr != null) {
             if (keyMatch(self.arr[h], key, hc)) {
                 self.arr[h].value += n;
-                return;
+                return h;
             }
             h = (h + 1) & m;
         }
         self.arr[h] = .{ .key_ptr = key.ptr, .key_len = @intCast(key.len), .hcode = hc, .value = n };
         self.count += 1;
+        return h;
     }
 
     inline fn incr(self: *Table, key: []const u8, n: u64) void {
@@ -136,19 +138,20 @@ const Table = struct {
     }
 
     // 同 incrH, 但新键的 key 复制到持久化 arena (缓冲区会被复用/解除映射的场景)
-    fn incrHInterned(self: *Table, arena: *KeyArena, key: []const u8, hc: u32, n: u64) void {
+    fn incrHInterned(self: *Table, arena: *KeyArena, key: []const u8, hc: u32, n: u64) usize {
         if (self.arr.len * 2 < (self.count + 1) * 3) self.enlarge();
         const m = self.arr.len - 1;
         var h = hc & m;
         while (self.arr[h].key_ptr != null) {
             if (Table.keyMatch(self.arr[h], key, hc)) {
                 self.arr[h].value += n;
-                return;
+                return h;
             }
             h = (h + 1) & m;
         }
         self.arr[h] = .{ .key_ptr = arena.intern(key), .key_len = @intCast(key.len), .hcode = hc, .value = n };
         self.count += 1;
+        return h;
     }
 
     // 融合插入 (整文件模式): 同一请求行同时累计 次数(value) 与 发送字节(value2)
@@ -317,6 +320,15 @@ const NFIELDS = 8;
 
 const Span = struct { start: usize, end: usize };
 
+// 上一行同一字段的命中槽位缓存
+// 日志里同一字段常常连续重复 (实测 time_local 95.5%, xff 92.2%, status 83.3%, referer 52.2%),
+// 命中时该槽位仍在 L1, 可直接累加: 省掉一次 hashKey + 一次哈希探测
+const LastHit = struct {
+    hcode: u32 = 0,
+    idx: u32 = 0,
+    len: u32 = 0,
+};
+
 const Workspace = struct {
     tables: [NFIELDS]Table = undefined,
     bad: [1000]?Table = .{null} ** 1000,
@@ -326,6 +338,7 @@ const Workspace = struct {
     span: Span = .{ .start = 0, .end = 0 },
     intern_mode: bool = false, // 窗口模式: key 必须复制到 arena (缓冲区会被复用/解除映射)
     arena: KeyArena = .{},
+    last: [NFIELDS]LastHit = [_]LastHit{.{}} ** NFIELDS,
 
     fn init(buf: []const u8, span: Span) Workspace {
         var w: Workspace = .{ .buf = buf, .span = span };
@@ -334,16 +347,32 @@ const Workspace = struct {
     }
 
     // 插入字段计数 (intern_mode 时把 key 复制到持久化 arena)
-    inline fn put(self: *Workspace, fi: usize, key: []const u8, n: u64) void {
-        self.putH(fi, key, hashKey(key), n);
-    }
-
-    inline fn putH(self: *Workspace, fi: usize, key: []const u8, hc: u32, n: u64) void {
-        if (self.intern_mode) {
-            self.tables[fi].incrHInterned(&self.arena, key, hc, n);
-        } else {
-            self.tables[fi].incrH(key, hc, n);
+    // 快路径: 与上一行同字段相同 → 直接累加缓存槽位, 跳过 hash 与探测
+    // (槽位在表扩容后可能失效, 故逐项校验 hcode/长度/字节; 全部相等即证明该槽就是本 key)
+    inline fn put(self: *Workspace, comptime fi: usize, key: []const u8, n: u64) void {
+        const t = &self.tables[fi];
+        const lh = &self.last[fi];
+        if (lh.len != 0 and @as(usize, lh.len) == key.len) {
+            const arr = t.arr;
+            if (lh.idx < arr.len) {
+                const s = &arr[lh.idx];
+                if (s.key_ptr != null and s.hcode == lh.hcode and
+                    @as(usize, s.key_len) == key.len and
+                    std.mem.eql(u8, s.key_ptr.?[0..s.key_len], key))
+                {
+                    s.value += n;
+                    return;
+                }
+            }
         }
+        const hc = hashKey(key);
+        const idx = if (self.intern_mode)
+            t.incrHInterned(&self.arena, key, hc, n)
+        else
+            t.incrH(key, hc, n);
+        lh.hcode = hc;
+        lh.len = @intCast(key.len);
+        lh.idx = @intCast(idx);
     }
 
     // 请求表融合插入: 一次探测同时累计 次数(value) 与 发送字节(value2)
@@ -359,9 +388,9 @@ const Workspace = struct {
     inline fn putBad(self: *Workspace, code: usize, key: []const u8, hc: u32) void {
         if (self.bad[code] == null) self.bad[code] = Table.init(1024);
         if (self.intern_mode) {
-            self.bad[code].?.incrHInterned(&self.arena, key, hc, 1);
+            _ = self.bad[code].?.incrHInterned(&self.arena, key, hc, 1);
         } else {
-            self.bad[code].?.incrH(key, hc, 1);
+            _ = self.bad[code].?.incrH(key, hc, 1);
         }
     }
 };
