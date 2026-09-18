@@ -28,6 +28,23 @@ g++ -Wall -std=c++20 -flto=auto -static-libstdc++ -static-libgcc --static -Wl,-B
 
 ```
 
+
+## zig 版本
+
+```
+# 本机编译 (macOS / Linux)
+zig build-exe main.zig -O ReleaseFast -fstrip
+
+# 静态交叉编译 Linux 二进制 (musl 静态链接, 部署无运行时依赖)
+zig build-exe main.zig -O ReleaseFast -target x86_64-linux-musl -lc -fstrip -femit-bin=bin/nginx_log_linux_x86_64
+zig build-exe main.zig -O ReleaseFast -target aarch64-linux-musl -lc -fstrip -femit-bin=bin/nginx_log_linux_aarch64
+```
+
+超 1G 的日志走 512MB 窗口 mmap, 每解析完一个窗口立即 munmap 归还物理页, 内存占用恒定, 6G+ 文件也不会 OOM; 解析当前窗口前异步预读下一窗口, 磁盘 I/O 与解析重叠
+
+支持 `./main access.log` 与 `zcat access.log*.gz | ./main` 两种用法, stdin 会转存到磁盘临时文件再按窗口映射, 不占内存
+
+
 分析格式为nginx默认配置格式
 ```
     log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
