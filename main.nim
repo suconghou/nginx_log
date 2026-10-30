@@ -9,16 +9,16 @@ type Line = object
     l: int
 
 
-# 类似内置substr的更快实现
+# 类似内置substr的更快实现，免去内置的边界裁剪与内存清零
 func substr(s: string, first: int, last: int): string =
     let l = last-first+1
     if l < 1:
         return ""
-    result = newString(l)
+    result = newStringUninit(l)
     copyMem(result[0].addr, cast[cstring](cast[uint](s.cstring)+first.uint), l)
 
 # 根据条件匹配直至不满足条件，舍去前后空格
-proc parse_item_trim_space(this: var Line, cond: proc): string =
+proc parse_item_trim_space(this: var Line, cond: proc(x, y: char): bool {.nimcall.}): string =
     while this.index < this.l and this.str[this.index] == ' ':
         this.index+=1
     var i = this.index;
@@ -308,7 +308,7 @@ try:
     else:
         process(stdin)
 except Exception:
-    echo getCurrentExceptionMsg()
+    stderr.writeLine(getCurrentExceptionMsg())
     quit(1)
 
 
